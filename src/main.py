@@ -1,3 +1,4 @@
+import torch
 from PyQt5.QtWidgets import QApplication
 from gui.window import AuthWindow
 import sys
