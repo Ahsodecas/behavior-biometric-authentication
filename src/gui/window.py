@@ -1,6 +1,7 @@
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
-    QVBoxLayout, QMessageBox, QFileDialog, QComboBox
+    QVBoxLayout, QMessageBox, QFileDialog, QComboBox, QHBoxLayout, QFrame
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
 import os
@@ -14,6 +15,8 @@ from sklearn.preprocessing import StandardScaler
 from src.utils.data_collector import DataCollector
 
 model_path = "models/snn_final.pt"
+
+# ----------------- App-wide CSS (tweakable) -----------------
 
 
 class AuthWindow(QWidget):
@@ -38,67 +41,110 @@ class AuthWindow(QWidget):
         self.threshold = 0.2
         self.device = None
 
-    # ---------------------------------------------------------
-    # ------------------- ENROLLMENT MODE ---------------------
-    # ---------------------------------------------------------
+    # ---------------- UI BUILD HELPERS ----------------
+    def center_on_screen(self):
+        frame = self.frameGeometry()
+        screen = QApplication.primaryScreen().availableGeometry().center()
+        frame.moveCenter(screen)
+        self.move(frame.topLeft())
+
+    def make_card(self):
+        """Return a larger, modern card."""
+        card = QFrame()
+        card.setObjectName("card")
+        card.setMinimumWidth(600)
+        card.setMinimumHeight(400)
+        return card
+
     def setup_enrollment_mode(self):
-        self.resize(600, 400)
+        if hasattr(self, "layout") and self.layout:
+            self.clear_layout()
+
+        self.resize(900, 650)
         self.center_on_screen()
 
-        self.layout = QVBoxLayout()
+        self.layout = QVBoxLayout(self)
+        self.layout.setAlignment(Qt.AlignCenter)
+        self.layout.setSpacing(20)
 
-        self.layout.addWidget(QLabel("Mode:"), alignment=Qt.AlignLeft)
-        self.layout.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+        card = self.make_card()
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(30, 30, 30, 30)
+        card_layout.setSpacing(20)
+
+        # Title and mode selector
+        top_row = QHBoxLayout()
+        mode_box = self.create_mode_selector()
+        mode_box.setFixedWidth(180)
+        top_row.addWidget(mode_box, alignment=Qt.AlignLeft)
 
         title = QLabel("User Enrollment")
-        title.setStyleSheet("font-size: 18pt; font-weight: bold;")
-        self.layout.addWidget(title, alignment=Qt.AlignCenter)
+        title.setObjectName("title")
+        title.setProperty("class", "title")
+        title.setAlignment(Qt.AlignCenter)
+        top_row.addStretch()
+        top_row.addWidget(title)
+        top_row.addStretch()
+        card_layout.addLayout(top_row)
 
+        # Instruction
         instr = QLabel(
-            f"Please type your password exactly {self.enroll_target} times.\n"
-            f"Password must be: {self.password_fixed}"
-        )
-        instr.setStyleSheet("font-size: 12pt;")
-        self.layout.addWidget(instr, alignment=Qt.AlignCenter)
+            f"Please type your password exactly {self.enroll_target} times.\nPassword must be: {self.password_fixed}")
+        instr.setProperty("class", "instr")
+        instr.setAlignment(Qt.AlignCenter)
+        card_layout.addWidget(instr)
 
-        self.username_label = QLabel("Username:")
-        self.username_label.setStyleSheet("font-size: 14pt;")
-        self.layout.addWidget(self.username_label, alignment=Qt.AlignCenter)
-
+        # Username input
+        username_row = QHBoxLayout()
+        username_label = QLabel("Username:")
+        username_label.setProperty("class", "field-label")
+        username_row.addWidget(username_label, alignment=Qt.AlignVCenter)
         self.username_entry = QLineEdit()
         self.username_entry.setPlaceholderText("Choose a username")
-        self.username_entry.setStyleSheet("font-size: 12pt; padding: 5px;")
-        self.layout.addWidget(self.username_entry, alignment=Qt.AlignCenter)
+        username_row.addWidget(self.username_entry)
+        card_layout.addLayout(username_row)
 
-        self.password_label = QLabel("Password:")
-        self.password_label.setStyleSheet("font-size: 14pt;")
-        self.layout.addWidget(self.password_label, alignment=Qt.AlignCenter)
-
+        # Password input
+        password_row = QHBoxLayout()
+        password_label = QLabel("Password:")
+        password_label.setProperty("class", "field-label")
+        password_row.addWidget(password_label, alignment=Qt.AlignVCenter)
         self.password_entry = QLineEdit()
         self.password_entry.setEchoMode(QLineEdit.Password)
         self.password_entry.setPlaceholderText("Enter the password")
-        self.password_entry.setStyleSheet("font-size: 12pt; padding: 5px;")
         self.password_entry.installEventFilter(self)
-        self.layout.addWidget(self.password_entry, alignment=Qt.AlignCenter)
+        password_row.addWidget(self.password_entry)
+        card_layout.addLayout(password_row)
+
+        # Buttons
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
 
         self.enroll_button = QPushButton("Submit Sample")
-        self.enroll_button.setStyleSheet("font-size: 12pt; padding: 10px 20px;")
-        self.enroll_button.clicked.connect(self.submit_enrollment_sample)
-        self.layout.addWidget(self.enroll_button, alignment=Qt.AlignCenter)
+        self.enroll_button.setProperty("class", "primary")
+        self.enroll_button.clicked.connect(self.submit_enrollment_sample)  # <--- ADD THIS
+        btn_row.addWidget(self.enroll_button)
 
+        self.skip_enroll_button = QPushButton("Load CSV")
+        self.skip_enroll_button.setProperty("class", "secondary")
+        btn_row.addWidget(self.skip_enroll_button)
+        btn_row.addStretch()
+
+        card_layout.addLayout(btn_row)
+
+        # Progress label
         self.progress_label = QLabel(f"Samples collected: 0 / {self.enroll_target}")
-        self.progress_label.setStyleSheet("font-size: 12pt;")
-        self.layout.addWidget(self.progress_label, alignment=Qt.AlignCenter)
+        self.progress_label.setProperty("class", "status")
+        self.progress_label.setAlignment(Qt.AlignCenter)
+        card_layout.addWidget(self.progress_label)
 
-        self.skip_enroll_button = QPushButton("Skip Enrollment and Load Existing CSV")
-        self.skip_enroll_button.setStyleSheet("font-size: 12pt; padding: 10px 20px;")
-        self.skip_enroll_button.clicked.connect(self.skip_enrollment)
-        self.layout.addWidget(self.skip_enroll_button, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
+        self.layout.addWidget(card, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
+        self.setLayout(self.layout)
 
         self.data_collector.start_session()
-        self.enroll_filename = f"enrollment_features_{self.data_collector.session_start_time}.csv"
-
-        self.setLayout(self.layout)
+        self.enroll_filename = f"enrollment_features_ksenia.csv"
 
     def skip_enrollment(self):
         # Let user select existing enrollment CSV
@@ -195,52 +241,73 @@ class AuthWindow(QWidget):
     # ------------------- VERIFICATION MODE -------------------
     # ---------------------------------------------------------
     def setup_authentication_mode(self):
-        self.resize(600, 400)
+        self.clear_layout()
+        self.resize(760, 480)
         self.center_on_screen()
 
-        self.clear_layout()
+        self.layout.setAlignment(Qt.AlignCenter)
 
-        self.layout.addWidget(QLabel("Mode:"), alignment=Qt.AlignLeft)
-        self.layout.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+        card = self.make_card()
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(18, 16, 18, 16)
+        card_layout.setSpacing(12)
 
+        top_row = QHBoxLayout()
+        top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
         title = QLabel("User Verification")
-        title.setStyleSheet("font-size: 18pt; font-weight: bold;")
-        self.layout.addWidget(title, alignment=Qt.AlignCenter)
+        title.setObjectName("title")
+        title.setFont(QFont("", 12, QFont.Bold))
+        title.setStyleSheet("background: transparent;")
+        top_row.addStretch()
+        top_row.addWidget(title)
+        top_row.addStretch()
+        card_layout.addLayout(top_row)
 
         # Username
+        urow = QHBoxLayout()
         self.username_label = QLabel("Username:")
-        self.username_label.setStyleSheet("font-size: 14pt;")
-        self.layout.addWidget(self.username_label, alignment=Qt.AlignCenter)
-
+        self.username_label.setProperty("class", "field-label")
+        urow.addWidget(self.username_label, alignment=Qt.AlignVCenter)
         self.username_entry = QLineEdit()
         self.username_entry.setPlaceholderText("Enter your username")
-        self.username_entry.setStyleSheet("font-size: 12pt; padding: 5px;")
-        self.layout.addWidget(self.username_entry, alignment=Qt.AlignCenter)
+        urow.addWidget(self.username_entry)
+        card_layout.addLayout(urow)
 
         # Password
+        prow = QHBoxLayout()
         self.password_label = QLabel("Password:")
-        self.password_label.setStyleSheet("font-size: 14pt;")
-        self.layout.addWidget(self.password_label, alignment=Qt.AlignCenter)
-
+        self.password_label.setProperty("class", "field-label")
+        prow.addWidget(self.password_label, alignment=Qt.AlignVCenter)
         self.password_entry = QLineEdit()
         self.password_entry.setEchoMode(QLineEdit.Password)
         self.password_entry.setPlaceholderText("Enter your password")
-        self.password_entry.setStyleSheet("font-size: 12pt; padding: 5px;")
         self.password_entry.installEventFilter(self)
-        self.layout.addWidget(self.password_entry, alignment=Qt.AlignCenter)
+        prow.addWidget(self.password_entry)
+        card_layout.addLayout(prow)
 
-        # Button
+        # Authenticate button
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
         self.authenticate_button = QPushButton("Authenticate")
-        self.authenticate_button.setStyleSheet("font-size: 12pt; padding: 10px 20px;")
+        self.authenticate_button.setProperty("class", "primary")
         self.authenticate_button.clicked.connect(self.authenticate)
-        self.layout.addWidget(self.authenticate_button, alignment=Qt.AlignCenter)
+        btn_row.addWidget(self.authenticate_button)
+        btn_row.addStretch()
+        card_layout.addLayout(btn_row)
 
+        # Result label
         self.result_label = QLabel("")
-        self.result_label.setStyleSheet("font-size: 12pt;")
-        self.layout.addWidget(self.result_label, alignment=Qt.AlignCenter)
+        self.result_label.setProperty("class", "status")
+        self.result_label.setAlignment(Qt.AlignCenter)
+        card_layout.addWidget(self.result_label)
 
-        self.data_collector.start_session()
+        self.layout.addStretch()
+        self.layout.addWidget(card, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
         self.setLayout(self.layout)
+
+        # start data collector session for auth mode
+        self.data_collector.start_session()
 
     def load_snn_model(self, ckpt_path):
         # Choose device (you can change to cuda if available)
@@ -431,7 +498,6 @@ class AuthWindow(QWidget):
 
     # ---------------------------------------------------------
     def create_mode_selector(self):
-        """Returns a widget containing dropdown for switching modes."""
         box = QComboBox()
         box.addItems(["Enrollment", "Training", "Authentication"])
         box.setCurrentText({
@@ -440,23 +506,17 @@ class AuthWindow(QWidget):
                                "authentication": "Authentication"
                            }.get(self.mode, "Enrollment"))
         box.currentTextChanged.connect(self.on_mode_changed)
-        box.setStyleSheet("font-size: 12pt; padding: 5px;")
         return box
 
-    # ---------------------------------------------------------
     def clear_layout(self):
-        """Remove all widgets from the current layout."""
-        while self.layout.count():
-            item = self.layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                # Only remove event filter if it exists
-                if widget == getattr(self, "password_entry", None):
-                    widget.removeEventFilter(self)
-                widget.deleteLater()
-
-    def center_on_screen(self):
-        frame = self.frameGeometry()
-        screen = QApplication.primaryScreen().availableGeometry().center()
-        frame.moveCenter(screen)
-        self.move(frame.topLeft())
+        # Remove all widgets from layout safely
+        try:
+            while self.layout.count():
+                item = self.layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    if widget == getattr(self, "password_entry", None):
+                        widget.removeEventFilter(self)
+                    widget.deleteLater()
+        except Exception:
+            pass
