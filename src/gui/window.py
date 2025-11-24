@@ -1,17 +1,14 @@
+import os
+import torch
+import numpy as np
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox, QHBoxLayout, QFrame
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
-import os
-
-import torch
-import numpy as np
 from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
-
 from sklearn.preprocessing import StandardScaler
-
 from src.utils.data_collector import DataCollector
 
 model_path = "models/snn_final.pt"
