@@ -11,16 +11,16 @@ class FeatureExtractor:
 
     features_dir = "extracted_features"
 
-    def __init__(self, username=None, raw_key_data = None, raw_mouse_data = None):
+    def __init__(self, username=None, raw_key_data = None, raw_mouse_data = None, rep_counter = None):
         self.key_features = ExtractedFeatures()
         self.mouse_features = ExtractedFeatures()
         self.username = username
         self.raw_key_data = raw_key_data
         self.raw_mouse_data = raw_mouse_data
-        self._create_features_directory()
+        self.rep_counter = rep_counter or 0
+        self.create_features_directory()
 
-    def _create_features_directory(self):
-        """Create the data directory if it doesn't exist."""
+    def create_features_directory(self):
         if not os.path.exists(self.features_dir):
             os.makedirs(self.features_dir)
 
@@ -32,7 +32,7 @@ class FeatureExtractor:
         - UD.{k1}.{k2}: time between release of k1 and press of k2
         """
 
-        df = pd.DataFrame(self.raw_key_data)
+        df = pd.DataFrame([e.to_dict() for e in self.raw_key_data])
         df = df.sort_values('timestamp').reset_index(drop=True)
 
         features = {}
@@ -100,17 +100,12 @@ class FeatureExtractor:
         # is rep_counter needed here?
         # should session_index be modified anywhere?
 
-        self.key_features = {**metadata, **features}
+        self.key_features.update(metadata, features)
 
-    def save_session_csv(self, append=False):
-        """Save keystroke extracted features to CSV files."""
-        features_saved = self.save_features_csv(append=append)
-        return features_saved
-
-    def save_features_csv(self, filename=None, append=True):
+    def save_key_features_csv(self, filename=None, append=False):
         """
         Save extracted features (self.features) to a CSV file.
-        During enrollment, all samples go into a single file with append=True.
+        During enrollment, all samples go into a single file with append=False.
         """
         if not self.username:
             print("save_features_csv: username not set")
@@ -129,7 +124,7 @@ class FeatureExtractor:
             filename = os.path.join(user_dir, filename)
 
         # Sort keys to ensure consistent CSV column order
-        key_features_list = list(self.key_features.keys())
+        key_features_list = list(self.key_features.get_keys())
         fieldnames = key_features_list
 
         mode = 'a' if append and os.path.exists(filename) else 'w'
@@ -141,7 +136,7 @@ class FeatureExtractor:
                     writer.writeheader()
                 row = {}
                 for k in key_features_list:
-                    v = self.key_features.get(k)
+                    v = self.key_features.get_key(k)
                     if isinstance(v, (list, dict)):
                         row[k] = json.dumps(v, ensure_ascii=False)
                     else:
@@ -157,5 +152,11 @@ class FeatureExtractor:
 
     def clear_data(self):
         """Clear extracted features for the next session."""
+        self.key_features.clear()
+        self.mouse_features.clear()
+
+    # FIX add fault functionality
+    def clear_for_next_rep(self, fault=False):
+        """Clear extracted features for the next rep."""
         self.key_features.clear()
         self.mouse_features.clear()

@@ -12,3 +12,12 @@ class KeyStrokeEvent:
         self.event_type = event_type
         self.timestamp = timestamp
         self.session_elapsed_time = round(session_elapsed, 6)
+
+    def to_dict(self):
+        return {
+            "key": self.key,
+            "keysym": self.keysym,
+            "event_type": self.event_type,
+            "timestamp": self.timestamp,
+            "session_elapsed_time": self.session_elapsed_time,
+        }
