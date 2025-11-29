@@ -56,3 +56,45 @@ class DataCollector:
         self.last_event_time = self.session_start_time
         if not failed:
             self.rep_counter += 1
+
+    def save_key_raw_csv(self, filename=None):
+        """
+        Save the raw keystroke event data to a CSV file.
+        """
+        try:
+            if not self.data:
+                raise ValueError("No raw keystroke data to save.")
+
+
+            # Directory structure
+            user = self.username or "unknown_user"
+            user_dir = os.path.join(self.data_dir, user)
+            os.makedirs(user_dir, exist_ok=True)
+
+            if filename is None:
+                filename = os.path.join(user_dir, "rep_{self.rep_counter}.csv")
+            else:
+                filename = os.path.join(user_dir, filename)
+
+            with open(filename, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+
+                writer.writerow(["key", "keysym", "event_type", "timestamp", "session_elapsed_time"])
+
+                for evt in self.data:
+                    row = evt.to_dict()
+                    writer.writerow([
+                        row["key"],
+                        row["keysym"],
+                        row["event_type"],
+                        row["timestamp"],
+                        row["session_elapsed_time"]
+                    ])
+
+            print(f"Raw data saved to {filename}")
+            return filename
+
+        except Exception as e:
+            print(f"[ERROR] Failed to save raw keystroke data: {e}")
+            return None
+

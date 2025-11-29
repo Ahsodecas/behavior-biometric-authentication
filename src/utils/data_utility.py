@@ -18,6 +18,9 @@ class DataUtility:
         self.feature_extractor.raw_key_data = self.data_collector.data
         self.feature_extractor.extract_key_features()
 
+    def save_raw_csv(self, filename=None):
+        self.data_collector.save_key_raw_csv(filename)
+
     def save_features_csv(self, filename=None, append=False):
         self.feature_extractor.save_key_features_csv(filename, append)
 

@@ -1,3 +1,6 @@
+# Revised code with try/except blocks for safety
+# (Only showing sections with added exception handling wrappers.)
+
 import os
 import torch
 import numpy as np
@@ -17,83 +20,116 @@ model_path = "models/snn_final.pt"
 
 class AuthenticationWindow(QWidget):
     def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Authentication App")
+        try:
+            super().__init__()
+            self.setWindowTitle("Authentication App")
 
-        # FIX change to enum
-        self.mode = "enrollment"
-        self.enroll_target = 40
-        self.enroll_count = 0
-        self.password_fixed = ".tie5Roanl"
+            self.mode = "enrollment"
+            self.enroll_target = 40
+            self.enroll_count = 0
+            self.enroll_filename = "enrollment_features.csv"
+            self.enroll_append = True
+            self.password_fixed = ".tie5Roanl"
 
-        self.data_utility = DataUtility()
-        self.security_controller = SecurityController(threshold=0.2)
-        self.setup_layout()
-        # FIX later should be changed to just login page and the security controller must initiate the right mode
-        self.setup_enrollment_mode()
+            self.data_utility = DataUtility()
+            self.security_controller = SecurityController(threshold=0.2)
+            self.setup_layout()
+            self.setup_enrollment_mode()
+        except Exception as e:
+            QMessageBox.critical(self, "Init Error", str(e))
 
     def setup_enrollment_mode(self):
-        if hasattr(self, "layout") and self.layout:
-            self.clear_layout()
+        try:
+            if hasattr(self, "layout") and self.layout:
+                self.clear_layout()
 
-        self.resize(900, 650)
-        self.center_on_screen()
-        card = self.make_card()
+            self.resize(900, 650)
+            self.center_on_screen()
+            card = self.make_card()
 
-        card_layout = self.setup_enrollment_card_layout(card)
+            card_layout = self.setup_enrollment_card_layout(card)
 
-        self.add_card_layout_instructions(card_layout)
-        self.add_card_username_input(card_layout)
-        self.add_card_password_input(card_layout)
-        self.add_card_enrollment_buttons(card_layout)
-        self.add_card_enrollment_progress_label(card_layout)
+            self.add_card_layout_instructions(card_layout)
+            self.add_card_username_input(card_layout)
+            self.add_card_password_input(card_layout)
+            self.add_card_enrollment_buttons(card_layout)
+            self.add_card_enrollment_progress_label(card_layout)
 
-        self.layout.addStretch()
-        self.layout.addWidget(card, alignment=Qt.AlignCenter)
-        self.layout.addStretch()
+            self.layout.addStretch()
+            self.layout.addWidget(card, alignment=Qt.AlignCenter)
+            self.layout.addStretch()
 
-        self.data_utility.start()
+            self.data_utility.start()
+        except Exception as e:
+            QMessageBox.critical(self, "Enrollment Setup Error", str(e))
 
     def submit_enrollment_sample(self):
-        username = self.username_entry.text()
-        password = self.password_entry.text()
+        try:
+            username = self.username_entry.text()
+            password = self.password_entry.text()
 
-        if not username:
-            QMessageBox.warning(self, "Enrollment", "Enter a username.")
+            if not username:
+                QMessageBox.warning(self, "Enrollment", "Enter a username.")
+                self.password_entry.clear()
+                self.data_utility.reset()
+                return
+
+            if password != self.password_fixed:
+                QMessageBox.warning(self, "Enrollment", "Password does not match.")
+                self.password_entry.clear()
+                self.data_utility.reset()
+                return
+
+            self.data_utility.extract_features(username)
+            filename = self.enroll_filename if self.enroll_append else f"{self.enroll_count}_{self.enroll_filename}"
+            self.data_utility.save_features_csv(filename=filename, append=self.enroll_append)
+            # self.data_utility.save_raw_csv(filename=f"raw_{self.enroll_count}.csv")
+            self.enroll_count += 1
+            self.progress_label.setText(f"Samples collected: {self.enroll_count} / {self.enroll_target}")
+
             self.password_entry.clear()
             self.data_utility.reset()
-            return
 
-        if password != self.password_fixed:
-            QMessageBox.warning(self, "Enrollment", "Password does not match the required one.")
-            self.password_entry.clear()
-            self.data_utility.reset()
-            return
+            if self.enroll_count >= self.enroll_target:
+                QMessageBox.information(self, "Enrollment Complete", f"Collected {self.enroll_target} samples.")
+        except Exception as e:
+            QMessageBox.critical(self, "Enrollment Error", str(e))
 
-        self.data_utility.extract_features(username)
-        self.data_utility.save_features_csv(filename=self.enroll_filename, append=False)
-        self.enroll_count += 1
-        self.progress_label.setText(f"Samples collected: {self.enroll_count} / {self.enroll_target}")
+    def on_mode_changed(self, text):
+        try:
+            if text == "Enrollment":
+                self.mode = "enrollment"
+                self.clear_layout()
+                self.setup_enrollment_mode()
 
-        self.password_entry.clear()
-        self.data_utility.reset()
+            elif text == "Training":
+                self.mode = "training"
+                self.clear_layout()
+                self.setup_training_mode()
 
-        if self.enroll_count >= self.enroll_target:
-            QMessageBox.information(
-                self, "Enrollment Complete",
-                f"Collected {self.enroll_target} samples.\nSwitching to training phase."
-            )
-            # FIX implement, security module must switch to a different mode:
-            # self.switch_to_training_mode()
+            elif text == "Authentication":
+                self.mode = "authentication"
+                try:
+                    self.load_snn_model(model_path)
+                except Exception as e:
+                    QMessageBox.critical(self, "Model load failed", str(e))
+                    return
+                self.clear_layout()
+                self.setup_authentication_mode()
+        except Exception as e:
+            QMessageBox.critical(self, "Mode Change Error", str(e))
 
-    def setup_training_mode(self):
-        # implement
-        return None
-
-    def setup_authentication_mode(self):
-        # implement
-        return None
-
+    def clear_layout(self):
+        try:
+            while self.layout.count():
+                item = self.layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    if widget == getattr(self, "password_entry", None):
+                        widget.removeEventFilter(self)
+                    widget.deleteLater()
+        except Exception as e:
+            QMessageBox.critical(self, "Layout Clear Error", str(e))
 
     def on_mode_changed(self, text):
         if text == "Enrollment":

@@ -160,3 +160,4 @@ class FeatureExtractor:
         """Clear extracted features for the next rep."""
         self.key_features.clear()
         self.mouse_features.clear()
+        self.rep_counter += 1
