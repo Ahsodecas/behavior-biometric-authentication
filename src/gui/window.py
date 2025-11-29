@@ -8,7 +8,7 @@ import os
 
 import torch
 import numpy as np
-from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
+from datasets.snn_network import *
 
 from sklearn.preprocessing import StandardScaler
 
@@ -38,7 +38,7 @@ class AuthWindow(QWidget):
         self.feature_cols = None
         self.ref_sample = None
         self.templates = {}
-        self.threshold = 0.2
+        self.threshold = 0.7
         self.device = None
 
     # ---------------- UI BUILD HELPERS ----------------
@@ -309,40 +309,6 @@ class AuthWindow(QWidget):
         # start data collector session for auth mode
         self.data_collector.start_session()
 
-    def load_snn_model(self, ckpt_path):
-        # Choose device (you can change to cuda if available)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Device set to {self.device}")
-
-        # check path
-        if not os.path.exists(ckpt_path):
-            raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
-
-        # Temporary dataset to infer input dim and obtain scaler / feature columns
-        tmp_dataset = CMUDatasetTriplet("datasets/ksenia_training_2.csv")
-        input_dim = tmp_dataset.X.shape[1]
-        print(f"input dim: {input_dim}")
-
-        # Save scaler/feature_cols/ref_sample for later normalization and reference embedding
-        self.scaler = tmp_dataset.scaler
-        self.feature_cols = tmp_dataset.feature_cols
-        # Save a reference normalized sample (first row) to compare against
-        if tmp_dataset.X.shape[0] < 40:
-            raise ValueError("Dataset must contain at least 40 samples to compute mean reference sample.")
-        self.ref_sample = tmp_dataset.X[:40].mean(axis=0).astype(np.float32)
-
-        print(f"Loaded ref_sample for user {tmp_dataset.y[0]}: {self.ref_sample}")
-
-        # build model, load weights, set to device and eval
-        model = TripletSNN(input_dim=input_dim)
-        ckpt = torch.load(ckpt_path, map_location=self.device)
-        model.load_state_dict(ckpt["model_state"])
-        model.to(self.device)
-        model.eval()
-
-        self.model = model
-        print("Model loaded successfully.")
-
     # ---------------------------------------------------------
     # -------------------- AUTHENTICATION ----------------------
     # ---------------------------------------------------------
@@ -382,15 +348,25 @@ class AuthWindow(QWidget):
 
         if not username or not password:
             QMessageBox.warning(self, "Authentication", "Fill all fields.")
+            self.password_entry.clear()
+            self.data_collector.clear_for_next_rep()
             return
 
         if password != self.password_fixed:
             QMessageBox.critical(self, "Authentication", "Password incorrect.")
+            self.password_entry.clear()
+            self.data_collector.clear_for_next_rep()
             return
 
         # Ensure model & scaler are loaded
         if self.model is None or self.scaler is None or self.feature_cols is None:
-            QMessageBox.critical(self, "Authentication", "Model or scaler not loaded. Switch to Authentication mode to load model.")
+            QMessageBox.critical(
+                self,
+                "Authentication",
+                "Model or scaler not loaded. Switch to Authentication mode to load model."
+            )
+            self.password_entry.clear()
+            self.data_collector.clear_for_next_rep()
             return
 
         # Collect features from typing
@@ -399,42 +375,53 @@ class AuthWindow(QWidget):
         self.data_collector.save_features_csv()
         print("Features collected:", self.data_collector.features)
 
+        # Save features temporarily to CSV for compatibility with snn_network functions
+        temp_csv = "temp_auth_sample.csv"
         try:
-            raw = np.array([self.data_collector.features[col] for col in self.feature_cols], dtype=np.float32)
-        except KeyError as e:
-            QMessageBox.critical(self, "Authentication", f"Missing feature from DataCollector: {e}")
-            self.password_entry.clear()
-            return
+            pd.DataFrame([self.data_collector.features]).to_csv(temp_csv, index=False)
         except Exception as e:
-            QMessageBox.critical(self, "Authentication", f"Error reading features: {e}")
+            QMessageBox.critical(self, "Authentication", f"Failed to save temporary CSV: {e}")
             self.password_entry.clear()
+            self.data_collector.clear_for_next_rep()
             return
 
-        # Normalize using the SAME scaler used for training
         try:
-            normalized = self.scaler.transform(raw.reshape(1, -1)).astype(np.float32)[0]
+            # Compare the new sample to the enrolled sample CSV for this user
+            # Assume you have a stored reference CSV for the user:
+            enrolled_csv = f"collected_data/ksenia/enrolled_sample.csv"  # path to user's enrolled sample
+
+            distance, same = compare_two_samples(
+                model=self.model,
+                csv1=enrolled_csv,
+                csv2=temp_csv,
+                feature_cols=self.feature_cols,
+                scaler=self.scaler,
+                device="cuda" if torch.cuda.is_available() else "cpu",
+                threshold=self.threshold
+            )
         except Exception as e:
-            QMessageBox.critical(self, "Authentication", f"Scaler transform failed: {e}")
+            QMessageBox.critical(self, "Authentication", f"Verification failed: {e}")
+            self.password_entry.clear()
+            self.data_collector.clear_for_next_rep()
             return
 
-        print("Normalized sample:", normalized)
-
-        is_auth, dist = self.verify_user(normalized)
-
-        if is_auth:
+        if same:
             QMessageBox.information(
                 self,
                 "Authentication",
-                f"Authenticated!\nDistance = {dist:.4f}\nThreshold = {self.threshold}"
+                f"Authenticated!\nDistance = {distance:.4f}\nThreshold = {self.threshold}"
             )
-            self.switch_to_background_mode()
-
+            self.password_entry.clear()
+            self.data_collector.clear_for_next_rep()
         else:
             QMessageBox.critical(
                 self,
                 "Authentication",
-                f"Rejected!\nDistance = {dist:.4f}\nThreshold = {self.threshold}"
+                f"Rejected!\nDistance = {distance:.4f}\nThreshold = {self.threshold}"
             )
+            self.password_entry.clear()
+            self.data_collector.clear_for_next_rep()
+
 
     # ---------------------------------------------------------
     # --------------- EVENT FILTER FOR KEYSTROKES --------------
@@ -465,7 +452,7 @@ class AuthWindow(QWidget):
         elif text == "Authentication":
             self.mode = "authentication"
             try:
-                self.load_snn_model(model_path)
+                self.model, self.scaler, self.feature_cols = load_model("models/ksenia_snn_model.pth", device='cpu')
             except Exception as e:
                 QMessageBox.critical(self, "Model load failed", f"Failed to load model:\n{e}")
                 return
