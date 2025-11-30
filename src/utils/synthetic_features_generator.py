@@ -1,5 +1,6 @@
 import statistics as stat
 import random
+import numpy as np
 
 class SyntheticFeaturesGenerator:
     def __init__(self, username=None):
@@ -212,7 +213,31 @@ class SyntheticFeaturesGenerator:
         """
         return stat.mean(Si)
 
-    def generate_features_from_decisions(self, decisions, K_sequence, channel, generating_function="mean"):
+    def f_generating_func_icdf(self, Si):
+        """
+        Sample a timing value from the inverse CDF of the empirical distribution in Si.
+
+        Si : set of timing values (non-empty)
+        returns: float (sampled timing)
+        """
+        if not Si:
+            raise ValueError("Si cannot be empty")
+
+        # 1. Sort the values
+        sorted_values = np.sort(np.array(list(Si)))
+
+        # 2. Build empirical CDF points (normalized)
+        n = len(sorted_values)
+        cdf = np.linspace(0, 1, n, endpoint=False) + 1 / (2 * n)  # center points in [0,1)
+
+        # 3. Sample a uniform random number in [0,1)
+        u = np.random.uniform(0, 1)
+
+        # 4. Interpolate inverse CDF
+        sampled_value = np.interp(u, cdf, sorted_values)
+        return sampled_value
+
+    def generate_features_from_decisions(self, decisions, K_sequence, channel, generating_function="icdf"):
         generate_values = []
         for d in decisions:
             if d["chosen_order"] == -1:
@@ -222,6 +247,8 @@ class SyntheticFeaturesGenerator:
                 generate_values.append((feature_name, random.uniform(0, 1)))
             elif generating_function == "mean":
                 generate_values.append((feature_name, self.f_generating_func_mean(d["Si"])))
+            elif generating_function == "icdf":
+                generate_values.append((feature_name, self.f_generating_func_icdf(d["Si"])))
         return generate_values
 
     def construct_feature_name(self, K_sequence, channel, key_idx):
@@ -244,15 +271,15 @@ class SyntheticFeaturesGenerator:
         K_sequence = [".","t", "i", "e", "5", "R", "o", "a", "n", "l"]
         channel_hold='hold'
         decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order, channel=channel_hold)
-        self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold, generating_function="mean"))
+        self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold, generating_function="icdf"))
 
         channel_dd='DD'
         decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_dd)
-        self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd,generating_function="mean"))
+        self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd,generating_function="icdf"))
 
         channel_ud= 'UD'
         decisions_ud = self.select_contexts_for_sequence(ud_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_ud)
-        self.generated_features.extend(self.generate_features_from_decisions(decisions_ud, K_sequence=K_sequence, channel=channel_ud, generating_function="mean"))
+        self.generated_features.extend(self.generate_features_from_decisions(decisions_ud, K_sequence=K_sequence, channel=channel_ud, generating_function="icdf"))
 
         ordered_features = self.order_generated_features(K_sequence=K_sequence)
 
