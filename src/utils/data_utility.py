@@ -1,10 +1,12 @@
 from src.utils.data_collector import DataCollector
 from src.utils.feature_extractor import FeatureExtractor
+from src.utils.synthetic_features_generator import SyntheticFeaturesGenerator
 
 class DataUtility:
     def __init__(self):
         self.data_collector = DataCollector()
         self.feature_extractor = FeatureExtractor()
+        self.synthetic_features_generator = SyntheticFeaturesGenerator()
 
     def start(self):
         self.data_collector.start_session()
@@ -17,6 +19,12 @@ class DataUtility:
         self.feature_extractor.username = username
         self.feature_extractor.raw_key_data = self.data_collector.data
         self.feature_extractor.extract_key_features()
+
+    def generate_synthetic_features(self, username):
+        self.synthetic_features_generator.username = username
+        self.synthetic_features_generator.genuine_features = self.feature_extractor.prepocess_features_for_synthesis()
+        # add generation function and some parameters for it
+        self.synthetic_features_generator.generate()
 
     def save_raw_csv(self, filename=None):
         self.data_collector.save_key_raw_csv(filename)

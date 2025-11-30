@@ -149,6 +149,9 @@ class FeatureExtractor:
         print(f"Features saved to {filename} (append={append})")
         return True
 
+    def prepocess_features_for_synthesis(self):
+        return self.key_features.all_features
+
 
     def clear_data(self):
         """Clear extracted features for the next session."""

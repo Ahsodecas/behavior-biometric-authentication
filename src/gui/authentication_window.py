@@ -3,6 +3,7 @@
 # =====================================================================
 
 import os
+import csv
 import torch
 import numpy as np
 
@@ -146,6 +147,51 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
 
+
+    def load_csv_data(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
+        if not file_path:
+            return
+
+        if not os.path.exists(file_path):
+            QMessageBox.warning(self, "Load CSV", "Selected file does not exist.")
+            return
+
+        metadata = {}
+        features = {}
+        username = ""
+
+        try:
+            with open(file_path, newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    for key, value in row.items():
+                        if key == "subject":
+                            metadata[key] = value
+                            username = value
+                        elif value is not None and key == "sessionIndex" or key == "rep":
+                            try:
+                                value = int(value)
+                            except ValueError:
+                                pass
+                            metadata[key] = value
+                        elif key is not None and value is not None and value != '':
+                            try:
+                                # print(key +"  " + value)
+                                value = float(value)
+                            except ValueError:
+                                pass
+                            features[key] = value
+
+            self.data_utility.feature_extractor.key_features.update(metadata, features)
+            QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
+            print(self.data_utility.feature_extractor.key_features.all_features)
+            # print(self.data_utility.feature_extractor.all_features)
+
+            self.data_utility.generate_synthetic_features(username)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
 
     # =================================================================
     #  AUTHENTICATION MODE
@@ -432,6 +478,7 @@ class AuthenticationWindow(QWidget):
         # Load CSV button
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
+        self.enroll_button.clicked.connect(self.load_csv_data)
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()
