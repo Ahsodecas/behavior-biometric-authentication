@@ -237,16 +237,18 @@ class AuthenticationWindow(QWidget):
             try:
                 self.data_utility.username = username
                 self.data_utility.extract_features(username)
-                features = self.data_utility.feature_extractor.key_features
+                features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_features_csv(filename="temp_features.csv")
             except Exception as e:
                 QMessageBox.critical(self, "Feature Error", str(e))
+                self.password_entry.clear()
                 return
 
             try:
                 success, dist, message = self.authenticator.authenticate(username, password, features)
             except Exception as e:
                 QMessageBox.critical(self, "Model Error", str(e))
+                self.password_entry.clear()
                 return
 
             if success:
@@ -254,11 +256,14 @@ class AuthenticationWindow(QWidget):
                 try: self.switch_to_background_mode()
                 except Exception as e:
                     QMessageBox.critical(self, "Background Mode Error", str(e))
+                    self.password_entry.clear()
             else:
                 QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                self.password_entry.clear()
 
         except Exception as e:
             QMessageBox.critical(self, "Authentication Error", str(e))
+            self.password_entry.clear()
 
 
 

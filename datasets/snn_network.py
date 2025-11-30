@@ -350,4 +350,4 @@ if __name__ == "__main__":
     feature_cols = dataset.feature_cols
 
     # ----- 2) SAVE TRAINED MODEL -----
-    save_model(model, scaler, feature_cols, path="ksenia_snn_model.pth")
+    save_model(model, scaler, feature_cols, path="../models/ksenia_snn_model.pth")

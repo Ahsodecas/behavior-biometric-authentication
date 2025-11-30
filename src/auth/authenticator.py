@@ -4,6 +4,7 @@ import os
 import torch
 import numpy as np
 from datasets.test import TripletSNN, CMUDatasetTriplet
+import pandas as pd
 
 
 class Authenticator:
@@ -91,34 +92,34 @@ class Authenticator:
             return False, float("inf"), "Model not loaded."
 
         # Convert collected features -> ordered vector
-        try:
-            raw_list = []
-            for col in self.feature_cols:
-                val = feature_dict.get_key(col)
+        raw_list = []
 
-                # Handle missing features
-                if val is None:
-                    return False, float("inf"), f"Missing feature: {col}"
+        for col in self.feature_cols:
 
-                # Convert timestamps or strings to float
+            if col not in feature_dict:
+                return False, float("inf"), f"Missing feature in DataCollector: {col}"
+
+            val = feature_dict[col]
+
+            # Convert to numeric float
+            try:
+                # Case 1: numeric types -> convert directly
+                num = float(val)
+
+            except Exception:
+                # Case 2: strings such as timestamps -> try to convert via datetime
                 try:
-                    # Common case: value is already numeric
-                    num = float(val)
-                except Exception:
-                    # Attempt to convert timestamps / datetimes
-                    try:
-                        if isinstance(val, str):
-                            num = float(pd.to_datetime(val).timestamp())
-                        else:
-                            return False, float("inf"), f"Non-numeric feature: {col} -> {val}"
-                    except Exception:
+                    if isinstance(val, str):
+                        num = float(pd.to_datetime(val).timestamp())
+                    else:
                         return False, float("inf"), f"Unsupported feature type for {col}: {val}"
+                except Exception:
+                    return False, float("inf"), f"Could not convert feature {col}: {val}"
 
-                raw_list.append(num)
+            raw_list.append(num)
 
-            raw_vec = np.array(raw_list, dtype=np.float32)
-        except KeyError as e:
-            return False, float("inf"), f"Missing feature: {e}"
+        # Now convert to float32 numpy vector
+        raw_vec = np.array(raw_list, dtype=np.float32)
 
         # Normalize
         try:
@@ -126,7 +127,7 @@ class Authenticator:
         except Exception as e:
             return False, float("inf"), f"Scaler transform failed: {e}"
 
-        # Compute embedding distance
+        print(normalized_vec)
         dist = self.compute_distance(normalized_vec)
 
         if dist < self.threshold:
