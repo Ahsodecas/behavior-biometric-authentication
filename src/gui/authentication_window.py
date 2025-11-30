@@ -19,6 +19,7 @@ from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
 from src.auth.security_controller import SecurityController
+from src.snn.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authenticator import Authenticator
 
@@ -147,7 +148,6 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
 
-
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
         if not file_path:
@@ -198,6 +198,70 @@ class AuthenticationWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
+
+        # =================================================================
+        #  TRAINING MODE
+        # =================================================================
+        def setup_training_mode(self):
+            self.clear_layout()
+            self.resize(760, 480)
+            self.center_on_screen()
+
+            card = self.make_card()
+            card_layout = QVBoxLayout(card)
+            card_layout.setContentsMargins(30, 30, 30, 30)
+            card_layout.setSpacing(20)
+
+            # Title
+            title = QLabel("Model Training")
+            title.setAlignment(Qt.AlignCenter)
+            title.setFont(QFont("", 14, QFont.Bold))
+            card_layout.addWidget(title)
+
+            # Status label
+            self.training_status = QLabel("Press the button below to start training.")
+            self.training_status.setAlignment(Qt.AlignCenter)
+            card_layout.addWidget(self.training_status)
+
+            # Button
+            self.train_button = QPushButton("Start Training")
+            self.train_button.setProperty("class", "primary")
+            self.train_button.clicked.connect(self.start_model_training)
+            card_layout.addWidget(self.train_button, alignment=Qt.AlignCenter)
+
+            # Add card to UI
+            self.layout.addStretch()
+            self.layout.addWidget(card)
+            self.layout.addStretch()
+
+
+
+        def start_model_training(self):
+            """Triggered when user presses 'Start Training'."""
+            try:
+                self.training_status.setText("Model is training... please wait.")
+                self.train_button.setEnabled(False)
+
+                from src.snn.model_trainer import ModelTrainer
+
+                trainer = ModelTrainer(
+                    csv_path="datasets/ksenia_training_2.csv",
+                    out_dir="models",
+                    batch_size=64,
+                    lr=1e-3
+                )
+
+                self.worker = TrainingWorker(trainer)
+                self.worker.finished.connect(self.on_training_finished)
+                self.worker.start()
+
+            except Exception as e:
+                QMessageBox.critical(self, "Training Error", str(e))
+
+        def on_training_finished(self):
+            self.training_status.setText("Training finished.")
+            self.train_button.setEnabled(True)
+            QMessageBox.information(self, "Training", "Model training finished successfully.")
 
     # =================================================================
     #  AUTHENTICATION MODE
@@ -279,29 +343,45 @@ class AuthenticationWindow(QWidget):
 
 
     def authenticate(self):
-        username = self.username_entry.text()
-        password = self.password_entry.text()
+        try:
+            username = self.username_entry.text()
+            password = self.password_entry.text()
 
-        if not username or not password:
-            QMessageBox.warning(self, "Authentication", "Fill all fields.")
-            return
+            if not username or not password:
+                QMessageBox.warning(self, "Authentication", "Fill all fields.")
+                return
 
-        # Extract keystroke features
-        self.data_utility.username = username
-        self.data_utility.extract_features()
-        features = self.data_utility.features  # FIXED TYPO
+            try:
+                self.data_utility.username = username
+                self.data_utility.extract_features(username)
+                features = self.data_utility.feature_extractor.key_features.data
+                self.data_utility.save_features_csv(filename="temp_features.csv")
+            except Exception as e:
+                QMessageBox.critical(self, "Feature Error", str(e))
+                self.password_entry.clear()
+                return
 
-        success, dist, message = self.authenticator.authenticate(
-            username, password, features
-        )
+            try:
+                success, dist, message = self.authenticator.authenticate(username, password, features)
+            except Exception as e:
+                QMessageBox.critical(self, "Model Error", str(e))
+                self.password_entry.clear()
+                return
 
-        if success:
-            QMessageBox.information(self, "Authentication",
-                                    f"{message}\nDistance = {dist:.4f}")
-            self.switch_to_background_mode()
-        else:
-            QMessageBox.critical(self, "Authentication",
-                                 f"{message}\nDistance = {dist:.4f}")
+            if success:
+                QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                try: self.switch_to_background_mode()
+                except Exception as e:
+                    QMessageBox.critical(self, "Background Mode Error", str(e))
+                    self.password_entry.clear()
+            else:
+                QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                self.password_entry.clear()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Authentication Error", str(e))
+            self.password_entry.clear()
+
 
 
     # =================================================================
