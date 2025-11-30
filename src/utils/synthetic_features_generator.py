@@ -65,6 +65,7 @@ class SyntheticFeaturesGenerator:
 
         return hold_features, dd_flight_features, ud_flight_features
 
+    # this function may provide optimization to Si sets extraction, should be used later
     def _build_context_set(self, features_dict, context_dict):
         for order in range(self.context_order + 1):
             for i in range(len(features_dict)):
@@ -121,7 +122,7 @@ class SyntheticFeaturesGenerator:
 
     def select_contexts_for_sequence(self, training_U, K_sequence, M, channel='hold'):
         """
-        K_sequence : list of key names (target sequence) e.g. ['h','e','l','l','o']
+        K_sequence : list of key names (target sequence) e.g. ['p','a','s','s','w','o','r','d']
         In this context - the symbols of the password
         M          : maximum context order (int)
         channel    : 'hold' or 'UD' or 'DD'  (what we are synthesizing here)
@@ -143,26 +144,17 @@ class SyntheticFeaturesGenerator:
                   "use_random_fallback": bool
                 }
         """
-        # if channel == 'hold':
-        #     training_U = self.context_sets.get('hold', [])
-        # elif channel == 'UD':
-        #     training_U = self.context_sets.get('UD', [])
-        # elif channel == 'DD':
-        #     training_U = self.context_sets.get('DD', [])
-        # else:
-        #     raise ValueError("channel must be 'hold', 'DD' or 'UD'")
-
         n = len(K_sequence)
         decisions = []
 
         for i in range(n):
-            # for flights: there is no flight before the first key (i == 0)
             if (channel == 'UD' or channel == 'DD') and i == 0:
                 decisions.append({
                     "index": i,
                     "key": K_sequence[i],
                     "chosen_order": -1,
                     "Si": set(),
+                    "channel": channel,
                     "use_random_fallback": True
                 })
                 continue
@@ -203,13 +195,14 @@ class SyntheticFeaturesGenerator:
                 "key": target_key,
                 "chosen_order": chosen_m,
                 "Si": chosen_Si,
+                "channel": channel,
                 "use_random_fallback": use_random
             })
 
         return decisions
 
 
-    def f_mean(self, Si):
+    def f_generating_func_mean(self, Si):
         """
         Implements the simplest method described in the paper:
         f(S_i) = average over all past observations in S_i.
@@ -219,24 +212,85 @@ class SyntheticFeaturesGenerator:
         """
         return stat.mean(Si)
 
-    def generate_features_from_decisions(self, decisions):
+    def generate_features_from_decisions(self, decisions, K_sequence, channel, generating_function="mean"):
         generate_values = []
         for d in decisions:
+            if d["chosen_order"] == -1:
+                continue
+            feature_name = self.construct_feature_name(K_sequence=K_sequence, channel=channel, key_idx=d["index"])
             if d["use_random_fallback"]:
-                generate_values.append((d["key"], random.uniform(0, 1500)))
-            else:
-                generate_values.append((d["key"], stat.mean(d["Si"])))
+                generate_values.append((feature_name, random.uniform(0, 1)))
+            elif generating_function == "mean":
+                generate_values.append((feature_name, self.f_generating_func_mean(d["Si"])))
         return generate_values
+
+    def construct_feature_name(self, K_sequence, channel, key_idx):
+        if channel == 'hold':
+            return "H." + K_sequence[key_idx]
+        elif channel == 'UD':
+            prev_key = K_sequence[key_idx - 1]
+            curr_key = K_sequence[key_idx]
+            return f"UD.{prev_key}.{curr_key}"
+        elif channel == 'DD':
+            prev_key = K_sequence[key_idx - 1]
+            curr_key = K_sequence[key_idx]
+            return f"DD.{prev_key}.{curr_key}"
+        return ""
 
 
     def generate(self):
         # self.build_context_sets()
         hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
         K_sequence = [".","t", "i", "e", "5", "R", "o", "a", "n", "l"]
-        decisions = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order, channel='hold')
-        self.generated_features.extend(self.generate_features_from_decisions(decisions))
+        channel_hold='hold'
+        decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order, channel=channel_hold)
+        self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold, generating_function="mean"))
+
+        channel_dd='DD'
+        decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_dd)
+        self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd,generating_function="mean"))
+
+        channel_ud= 'UD'
+        decisions_ud = self.select_contexts_for_sequence(ud_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_ud)
+        self.generated_features.extend(self.generate_features_from_decisions(decisions_ud, K_sequence=K_sequence, channel=channel_ud, generating_function="mean"))
+
+        ordered_features = self.order_generated_features(K_sequence=K_sequence)
+
         print("Generated features:")
         print(self.generated_features)
+
+        return dict(ordered_features)
+
+    def order_generated_features(self, K_sequence):
+        """
+        Reorders features so that for each key in K_sequence:
+          H.key, DD.prev.curr, UD.prev.curr
+        are grouped together.
+        """
+        hold_dict = {name: val for name, val in self.generated_features if name.startswith("H.")}
+        dd_dict = {name: val for name, val in self.generated_features if name.startswith("DD.")}
+        ud_dict = {name: val for name, val in self.generated_features if name.startswith("UD.")}
+
+        ordered_features = []
+
+        for idx, curr_key in enumerate(K_sequence):
+            hold_name = f"H.{curr_key}"
+            if hold_name in hold_dict:
+                ordered_features.append((hold_name, hold_dict[hold_name]))
+
+            if idx > 0:
+                prev_key = K_sequence[idx - 1]
+                dd_name = f"DD.{prev_key}.{curr_key}"
+                if dd_name in dd_dict:
+                    ordered_features.append((dd_name, dd_dict[dd_name]))
+
+            if idx > 0:
+                prev_key = K_sequence[idx - 1]
+                ud_name = f"UD.{prev_key}.{curr_key}"
+                if ud_name in ud_dict:
+                    ordered_features.append((ud_name, ud_dict[ud_name]))
+
+        return ordered_features
 
 
     def clear_data(self):

@@ -20,11 +20,15 @@ class DataUtility:
         self.feature_extractor.raw_key_data = self.data_collector.data
         self.feature_extractor.extract_key_features()
 
-    def generate_synthetic_features(self, username):
+    def generate_synthetic_features(self, username, filename, num_features=10):
+        self.feature_extractor.username = username
         self.synthetic_features_generator.username = username
         self.synthetic_features_generator.genuine_features = self.feature_extractor.prepocess_features_for_synthesis()
-        # add generation function and some parameters for it
-        self.synthetic_features_generator.generate()
+        # add generation function and some parameters for it, change the loop to internal generator logic
+        for _ in range(0, num_features):
+            generated_features = self.synthetic_features_generator.generate()
+            self.feature_extractor.key_features.update(metadata=self.feature_extractor.key_features.metadata, features=generated_features)
+            self.save_features_csv(filename=filename,append=True)
 
     def save_raw_csv(self, filename=None):
         self.data_collector.save_key_raw_csv(filename)
