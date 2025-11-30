@@ -2,7 +2,7 @@ import os
 
 import torch
 from PyQt5.QtWidgets import QApplication
-from gui.window import AuthWindow
+from gui.authentication_window import AuthenticationWindow
 import sys
 
 def main():
@@ -16,7 +16,7 @@ def main():
     with open(css_path, "r") as f:
         app.setStyleSheet(f.read())
 
-    window = AuthWindow()
+    window = AuthenticationWindow()
     window.show()
     sys.exit(app.exec_())
 
