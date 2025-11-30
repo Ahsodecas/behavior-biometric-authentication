@@ -92,7 +92,31 @@ class Authenticator:
 
         # Convert collected features -> ordered vector
         try:
-            raw_vec = np.array([feature_dict[col] for col in self.feature_cols], dtype=np.float32)
+            raw_list = []
+            for col in self.feature_cols:
+                val = feature_dict.get_key(col)
+
+                # Handle missing features
+                if val is None:
+                    return False, float("inf"), f"Missing feature: {col}"
+
+                # Convert timestamps or strings to float
+                try:
+                    # Common case: value is already numeric
+                    num = float(val)
+                except Exception:
+                    # Attempt to convert timestamps / datetimes
+                    try:
+                        if isinstance(val, str):
+                            num = float(pd.to_datetime(val).timestamp())
+                        else:
+                            return False, float("inf"), f"Non-numeric feature: {col} -> {val}"
+                    except Exception:
+                        return False, float("inf"), f"Unsupported feature type for {col}: {val}"
+
+                raw_list.append(num)
+
+            raw_vec = np.array(raw_list, dtype=np.float32)
         except KeyError as e:
             return False, float("inf"), f"Missing feature: {e}"
 
