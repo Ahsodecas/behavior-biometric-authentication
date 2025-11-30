@@ -225,31 +225,41 @@ class AuthenticationWindow(QWidget):
 
         self.data_utility.start()
 
-
     def authenticate(self):
-        username = self.username_entry.text()
-        password = self.password_entry.text()
+        try:
+            username = self.username_entry.text()
+            password = self.password_entry.text()
 
-        if not username or not password:
-            QMessageBox.warning(self, "Authentication", "Fill all fields.")
-            return
+            if not username or not password:
+                QMessageBox.warning(self, "Authentication", "Fill all fields.")
+                return
 
-        # Extract keystroke features
-        self.data_utility.username = username
-        self.data_utility.extract_features()
-        features = self.data_utility.features  # FIXED TYPO
+            try:
+                self.data_utility.username = username
+                self.data_utility.extract_features(username)
+                features = self.data_utility.feature_extractor.key_features
+                self.data_utility.save_features_csv(filename="temp_features.csv")
+            except Exception as e:
+                QMessageBox.critical(self, "Feature Error", str(e))
+                return
 
-        success, dist, message = self.authenticator.authenticate(
-            username, password, features
-        )
+            try:
+                success, dist, message = self.authenticator.authenticate(username, password, features)
+            except Exception as e:
+                QMessageBox.critical(self, "Model Error", str(e))
+                return
 
-        if success:
-            QMessageBox.information(self, "Authentication",
-                                    f"{message}\nDistance = {dist:.4f}")
-            self.switch_to_background_mode()
-        else:
-            QMessageBox.critical(self, "Authentication",
-                                 f"{message}\nDistance = {dist:.4f}")
+            if success:
+                QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                try: self.switch_to_background_mode()
+                except Exception as e:
+                    QMessageBox.critical(self, "Background Mode Error", str(e))
+            else:
+                QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Authentication Error", str(e))
+
 
 
     # =================================================================
