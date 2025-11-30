@@ -13,7 +13,6 @@ class AuthenticationDecisionMaker:
     def make_decision(self, username, password, sample, threshold):
         if password != self.fixed_password:
             return False, float("inf")
-
         normalized = self.scaler.transform(sample.reshape(1, -1))[0]
         sample_emb = self.model.embed(normalized)
         ref_emb = self.model.embed(self.ref_sample)
