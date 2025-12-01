@@ -3,6 +3,7 @@
 # =====================================================================
 
 import os
+import csv
 import torch
 import numpy as np
 
@@ -54,8 +55,8 @@ class AuthenticationWindow(QWidget):
 
             # Core helpers
             self.data_utility = DataUtility()
-            self.security_controller = SecurityController(threshold=0.4)
-            self.authenticator = Authenticator(threshold=0.4)
+            self.security_controller = SecurityController(threshold=0.2)
+            self.authenticator = Authenticator(threshold=0.2)
 
             # UI setup
             self.setup_layout()
@@ -146,6 +147,58 @@ class AuthenticationWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
+    def load_csv_data(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
+        if not file_path:
+            return
+
+        if not os.path.exists(file_path):
+            QMessageBox.warning(self, "Load CSV", "Selected file does not exist.")
+            return
+
+        metadata = {}
+        features = {}
+        username = ""
+
+        try:
+            with open(file_path, newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    for key, value in row.items():
+                        if key == "subject":
+                            metadata[key] = value
+                            username = value
+                        elif value is not None and key == "sessionIndex" or key == "rep":
+                            try:
+                                value = int(value)
+                            except ValueError:
+                                pass
+                            metadata[key] = value
+                        elif key is not None and value is not None and value != '':
+                            try:
+                                # print(key +"  " + value)
+                                value = float(value)
+                            except ValueError:
+                                pass
+                            features[key] = value
+                    self.data_utility.feature_extractor.key_features.update(metadata, features)
+
+            QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
+
+            # DEBUG temporary messages
+            print("Features read: ")
+            print(self.data_utility.feature_extractor.key_features.all_features)
+            filename = (
+                self.enroll_filename
+                if self.enroll_append else
+                f"{self.enroll_count}_{self.enroll_filename}"
+            )
+            self.data_utility.generate_synthetic_features(username, filename, repetitions=10)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
+
+
     # =================================================================
     #  TRAINING MODE
     # =================================================================

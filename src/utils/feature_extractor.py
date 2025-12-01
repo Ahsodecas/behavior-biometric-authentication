@@ -125,6 +125,7 @@ class FeatureExtractor:
 
         # Sort keys to ensure consistent CSV column order
         key_features_list = list(self.key_features.get_keys())
+        print(f"key_features_list: {key_features_list}")
         fieldnames = key_features_list
 
         mode = 'a' if append and os.path.exists(filename) else 'w'
@@ -137,6 +138,7 @@ class FeatureExtractor:
                 row = {}
                 for k in key_features_list:
                     v = self.key_features.get_key(k)
+                    print("key: " + k + " value: " + str(v))
                     if isinstance(v, (list, dict)):
                         row[k] = json.dumps(v, ensure_ascii=False)
                     else:
@@ -148,6 +150,9 @@ class FeatureExtractor:
 
         print(f"Features saved to {filename} (append={append})")
         return True
+
+    def prepocess_features_for_synthesis(self):
+        return self.key_features.all_features
 
 
     def clear_data(self):
