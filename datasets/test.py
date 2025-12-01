@@ -102,7 +102,7 @@ class CMUDatasetTriplet(Dataset):
     def __getitem__(self, idx):
         # -------- Oversampling Ksenia ----------
         # 4× higher probability to sample her as anchor
-        if random.random() < 0.6:  # 60% chance
+        if random.random() < 0.3:  # 60% chance
             if "ksenia" in self.by_subject:
                 idx = random.choice(self.by_subject["ksenia"])
 
