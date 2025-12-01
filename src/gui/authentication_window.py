@@ -147,7 +147,6 @@ class AuthenticationWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
-
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
         if not file_path:
@@ -199,70 +198,83 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
 
-        # =================================================================
-        #  TRAINING MODE
-        # =================================================================
-        def setup_training_mode(self):
-            self.clear_layout()
-            self.resize(760, 480)
-            self.center_on_screen()
 
-            card = self.make_card()
-            card_layout = QVBoxLayout(card)
-            card_layout.setContentsMargins(30, 30, 30, 30)
-            card_layout.setSpacing(20)
+    # =================================================================
+    #  TRAINING MODE
+    # =================================================================
+    def setup_training_mode(self):
+        self.clear_layout()
+        self.resize(760, 480)
+        self.center_on_screen()
 
-            # Title
-            title = QLabel("Model Training")
-            title.setAlignment(Qt.AlignCenter)
-            title.setFont(QFont("", 14, QFont.Bold))
-            card_layout.addWidget(title)
+        card = self.make_card()
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(30, 30, 30, 30)
+        card_layout.setSpacing(20)
 
-            # Status label
-            self.training_status = QLabel("Press the button below to start training.")
-            self.training_status.setAlignment(Qt.AlignCenter)
-            card_layout.addWidget(self.training_status)
+        # Title row
+        top_row = QHBoxLayout()
+        top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
-            # Button
-            self.train_button = QPushButton("Start Training")
-            self.train_button.setProperty("class", "primary")
-            self.train_button.clicked.connect(self.start_model_training)
-            card_layout.addWidget(self.train_button, alignment=Qt.AlignCenter)
+        title = QLabel("Model Training")
+        title.setObjectName("title")
+        title.setFont(QFont("", 16, QFont.Bold))
+        title.setStyleSheet("background: transparent;")
+        title.setProperty("class", "title")
 
-            # Add card to UI
-            self.layout.addStretch()
-            self.layout.addWidget(card)
-            self.layout.addStretch()
+        top_row.addStretch()
+        top_row.addWidget(title)
+        top_row.addStretch()
+        card_layout.addLayout(top_row)
 
 
+        card_layout.addLayout(top_row)
 
-        def start_model_training(self):
-            """Triggered when user presses 'Start Training'."""
-            try:
-                self.training_status.setText("Model is training... please wait.")
-                self.train_button.setEnabled(False)
+        # Status label
+        self.training_status = QLabel("Press the button below to start training.")
+        self.training_status.setAlignment(Qt.AlignCenter)
+        self.training_status.setProperty("class", "instr")
+        card_layout.addWidget(self.training_status)
 
-                from src.snn.model_trainer import ModelTrainer
+        # Button
+        self.train_button = QPushButton("Start Training")
+        self.train_button.setProperty("class", "primary")
+        self.train_button.clicked.connect(self.start_model_training)
+        card_layout.addWidget(self.train_button, alignment=Qt.AlignCenter)
 
-                trainer = ModelTrainer(
-                    csv_path="datasets/ksenia_training_2.csv",
-                    out_dir="models",
-                    batch_size=64,
-                    lr=1e-3
-                )
+        # Add card to UI
+        self.layout.addStretch()
+        self.layout.addWidget(card)
+        self.layout.addStretch()
 
-                self.worker = TrainingWorker(trainer)
-                self.worker.finished.connect(self.on_training_finished)
-                self.worker.start()
 
-            except Exception as e:
-                QMessageBox.critical(self, "Training Error", str(e))
 
-        def on_training_finished(self):
-            self.training_status.setText("Training finished.")
-            self.train_button.setEnabled(True)
-            QMessageBox.information(self, "Training", "Model training finished successfully.")
+    def start_model_training(self):
+        """Triggered when user presses 'Start Training'."""
+        try:
+            self.training_status.setText("Model is training... please wait.")
+            self.train_button.setEnabled(False)
 
+            from src.snn.model_trainer import ModelTrainer
+
+            trainer = ModelTrainer(
+                csv_path="datasets/ksenia_training_2.csv",
+                out_dir="models",
+                batch_size=64,
+                lr=1e-3
+            )
+
+            self.worker = TrainingWorker(trainer)
+            self.worker.finished.connect(self.on_training_finished)
+            self.worker.start()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Training Error", str(e))
+
+    def on_training_finished(self):
+        self.training_status.setText("Training finished.")
+        self.train_button.setEnabled(True)
+        QMessageBox.information(self, "Training", "Model training finished successfully.")
     # =================================================================
     #  AUTHENTICATION MODE
     # =================================================================
@@ -340,7 +352,6 @@ class AuthenticationWindow(QWidget):
         self.setLayout(self.layout)
 
         self.data_utility.start()
-
 
     def authenticate(self):
         try:
@@ -564,7 +575,6 @@ class AuthenticationWindow(QWidget):
         # Load CSV button
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
-        self.skip_enroll_button.clicked.connect(self.load_csv_data)
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()
