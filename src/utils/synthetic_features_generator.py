@@ -240,7 +240,9 @@ class SyntheticFeaturesGenerator:
     def generate_features_from_decisions(self, decisions, K_sequence, channel, generating_function="icdf"):
         generate_values = []
         for d in decisions:
-            if d["chosen_order"] == -1:
+            if d["use_random_fallback"]:
+                feature_name = self.construct_feature_name(K_sequence, channel, d["index"])
+                generate_values.append((feature_name, random.uniform(0, 1)))
                 continue
             feature_name = self.construct_feature_name(K_sequence=K_sequence, channel=channel, key_idx=d["index"])
             if d["use_random_fallback"]:
@@ -249,6 +251,8 @@ class SyntheticFeaturesGenerator:
                 generate_values.append((feature_name, self.f_generating_func_mean(d["Si"])))
             elif generating_function == "icdf":
                 generate_values.append((feature_name, self.f_generating_func_icdf(d["Si"])))
+
+        print(generate_values)
         return generate_values
 
     def construct_feature_name(self, K_sequence, channel, key_idx):
@@ -268,11 +272,11 @@ class SyntheticFeaturesGenerator:
     def generate(self):
         # self.build_context_sets()
         hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
-        K_sequence = [".","t", "i", "e", "5", "R", "o", "a", "n", "l"]
+        K_sequence = [".","t", "i", "e", "5", "Shift.r", "o", "a", "n", "l"]
         channel_hold='hold'
         decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order, channel=channel_hold)
         self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold, generating_function="icdf"))
-
+        print(decisions_hold)
         channel_dd='DD'
         decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_dd)
         self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd,generating_function="icdf"))
@@ -316,7 +320,7 @@ class SyntheticFeaturesGenerator:
                 ud_name = f"UD.{prev_key}.{curr_key}"
                 if ud_name in ud_dict:
                     ordered_features.append((ud_name, ud_dict[ud_name]))
-
+        print(ordered_features)
         return ordered_features
 
 
