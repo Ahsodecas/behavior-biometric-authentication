@@ -21,7 +21,7 @@ from sklearn.preprocessing import StandardScaler
 from src.auth.security_controller import SecurityController
 from src.snn.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
-from src.auth.authenticator import Authenticator
+from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 
 
 # =====================================================================
@@ -55,8 +55,8 @@ class AuthenticationWindow(QWidget):
 
             # Core helpers
             self.data_utility = DataUtility()
-            self.security_controller = SecurityController(threshold=0.2)
-            self.authenticator = Authenticator(threshold=0.2)
+            self.security_controller = SecurityController(threshold=0.3)
+            self.authenticator = AuthenticationDecisionMaker(threshold=0.3)
 
             # UI setup
             self.setup_layout()
@@ -147,6 +147,7 @@ class AuthenticationWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
+
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
         if not file_path:
@@ -381,10 +382,10 @@ class AuthenticationWindow(QWidget):
 
             if success:
                 QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
-                try: self.switch_to_background_mode()
-                except Exception as e:
-                    QMessageBox.critical(self, "Background Mode Error", str(e))
-                    self.password_entry.clear()
+                #try: self.switch_to_background_mode()
+                #except Exception as e:
+                #    QMessageBox.critical(self, "Background Mode Error", str(e))
+                self.password_entry.clear()
             else:
                 QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
                 self.password_entry.clear()

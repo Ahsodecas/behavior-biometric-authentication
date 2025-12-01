@@ -1,7 +1,7 @@
 import os
 import torch
 import numpy as np
-from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
+from src.auth.authentication_decision_maker_old import AuthenticationDecisionMaker
 
 one_time_model = None
 one_time_scaler = None
