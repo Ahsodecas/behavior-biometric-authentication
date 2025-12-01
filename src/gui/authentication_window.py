@@ -54,8 +54,8 @@ class AuthenticationWindow(QWidget):
 
             # Core helpers
             self.data_utility = DataUtility()
-            self.security_controller = SecurityController(threshold=0.2)
-            self.authenticator = Authenticator(threshold=0.2)
+            self.security_controller = SecurityController(threshold=0.4)
+            self.authenticator = Authenticator(threshold=0.4)
 
             # UI setup
             self.setup_layout()
@@ -159,15 +159,28 @@ class AuthenticationWindow(QWidget):
         card_layout.setContentsMargins(30, 30, 30, 30)
         card_layout.setSpacing(20)
 
-        # Title
+        # Title row
+        top_row = QHBoxLayout()
+        top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+
         title = QLabel("Model Training")
-        title.setAlignment(Qt.AlignCenter)
-        title.setFont(QFont("", 14, QFont.Bold))
-        card_layout.addWidget(title)
+        title.setObjectName("title")
+        title.setFont(QFont("", 16, QFont.Bold))
+        title.setStyleSheet("background: transparent;")
+        title.setProperty("class", "title")
+
+        top_row.addStretch()
+        top_row.addWidget(title)
+        top_row.addStretch()
+        card_layout.addLayout(top_row)
+
+
+        card_layout.addLayout(top_row)
 
         # Status label
         self.training_status = QLabel("Press the button below to start training.")
         self.training_status.setAlignment(Qt.AlignCenter)
+        self.training_status.setProperty("class", "instr")
         card_layout.addWidget(self.training_status)
 
         # Button
