@@ -19,7 +19,7 @@ from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
 from src.auth.security_controller import SecurityController
-from src.snn.training_worker import TrainingWorker
+from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 
@@ -256,7 +256,7 @@ class AuthenticationWindow(QWidget):
             self.training_status.setText("Model is training... please wait.")
             self.train_button.setEnabled(False)
 
-            from src.snn.model_trainer import ModelTrainer
+            from src.ml.model_trainer import ModelTrainer
 
             trainer = ModelTrainer(
                 csv_path="datasets/ksenia_training_2.csv",
@@ -576,6 +576,7 @@ class AuthenticationWindow(QWidget):
         # Load CSV button
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
+        self.skip_enroll_button.clicked.connect(self.load_csv_data)
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()
