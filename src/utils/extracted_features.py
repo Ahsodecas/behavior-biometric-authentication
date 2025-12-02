@@ -31,4 +31,5 @@ class ExtractedFeatures:
         self.features = {}
         self.metadata = {}
         self.data = {}
+        self.all_features = []
 
