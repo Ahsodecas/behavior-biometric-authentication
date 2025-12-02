@@ -29,7 +29,10 @@ class DataUtility:
             generated_features = self.synthetic_features_generator.generate()
             print("GENERATED FEATURES in DATA UTILITY:")
             print(generated_features)
-            self.feature_extractor.key_features.update(metadata=self.feature_extractor.key_features.metadata, features=generated_features)
+            metadata = self.feature_extractor.key_features.metadata
+            metadata["generated"] = 1
+            metadata["rep"] = 0
+            self.feature_extractor.key_features.update(metadata=metadata, features=generated_features)
             print("GENERATED FEATURES in FEATURE EXTRACTOR:")
             print(self.feature_extractor.key_features.features)
             self.save_features_csv(filename=filename,append=True)

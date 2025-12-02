@@ -33,3 +33,47 @@ class ExtractedFeatures:
         self.data = {}
         self.all_features = []
 
+    def load_csv_features(self, file_path):
+        """
+        Load features from a CSV file, convert them to floats/timestamps,
+        and return an ExtractedFeatures object.
+        """
+        extracted = ExtractedFeatures()
+        metadata = {}
+        features = {}
+
+        try:
+            df = pd.read_csv(file_path)
+            # If multiple rows, take the first one (or iterate if needed)
+            row = df.iloc[0].to_dict()
+
+            for key, val in row.items():
+                # Handle metadata columns
+                if key in ["subject", "sessionIndex", "rep", "generated"]:
+                    try:
+                        val = int(val) if key != "subject" else val
+                    except Exception:
+                        pass
+                    metadata[key] = val
+                else:
+                    # Convert feature to numeric float
+                    try:
+                        num = float(val)
+                    except Exception:
+                        try:
+                            if isinstance(val, str):
+                                num = float(pd.to_datetime(val).timestamp())
+                            else:
+                                raise ValueError(f"Unsupported type for {key}: {val}")
+                        except Exception as e:
+                            print(f"Could not convert feature {key}: {e}")
+                            num = np.nan  # fallback
+
+                    features[key] = num
+
+            extracted.update(metadata, features)
+            return extracted
+
+        except Exception as e:
+            print(f"Failed to load CSV features: {e}")
+            return None
