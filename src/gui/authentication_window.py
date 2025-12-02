@@ -575,6 +575,8 @@ class AuthenticationWindow(QWidget):
         # Load CSV button
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
+        self.skip_enroll_button.clicked.connect(self.load_csv_data)
+        self.skip_enroll_button.setProperty("class", "primary")
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()
