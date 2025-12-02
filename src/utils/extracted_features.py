@@ -38,7 +38,6 @@ class ExtractedFeatures:
         Load features from a CSV file, convert them to floats/timestamps,
         and return an ExtractedFeatures object.
         """
-        extracted = ExtractedFeatures()
         metadata = {}
         features = {}
 
@@ -51,7 +50,10 @@ class ExtractedFeatures:
                 # Handle metadata columns
                 if key in ["subject", "sessionIndex", "rep", "generated"]:
                     try:
-                        val = int(val) if key != "subject" else val
+                        if key == "subject":
+                            username = val
+                        else:
+                            val = int(val)
                     except Exception:
                         pass
                     metadata[key] = val
@@ -71,8 +73,8 @@ class ExtractedFeatures:
 
                     features[key] = num
 
-            extracted.update(metadata, features)
-            return extracted
+            self.update(metadata, features)
+            return username
 
         except Exception as e:
             print(f"Failed to load CSV features: {e}")

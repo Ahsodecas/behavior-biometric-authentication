@@ -19,6 +19,7 @@ from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
 from src.auth.security_controller import SecurityController
+from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
@@ -162,31 +163,9 @@ class AuthenticationWindow(QWidget):
         username = ""
 
         try:
-            with open(file_path, newline='') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    for key, value in row.items():
-                        if key == "subject":
-                            metadata[key] = value
-                            username = value
-                        elif value is not None and key == "sessionIndex" or key == "rep":
-                            try:
-                                value = int(value)
-                            except ValueError:
-                                pass
-                            metadata[key] = value
-                        elif key is not None and value is not None and value != '':
-                            try:
-                                # print(key +"  " + value)
-                                value = float(value)
-                            except ValueError:
-                                pass
-                            features[key] = value
-                    self.data_utility.feature_extractor.key_features.update(metadata, features)
-
+            self.data_utility.feature_extractor.key_features.load_csv_features(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
-            # DEBUG temporary messages
             print("Features read: ")
             print(self.data_utility.feature_extractor.key_features.all_features)
             filename = (
@@ -253,20 +232,29 @@ class AuthenticationWindow(QWidget):
     def start_model_training(self):
         """Triggered when user presses 'Start Training'."""
         try:
-            self.training_status.setText("Model is training... please wait.")
+            self.training_status.setText("Data is processing.... Please wait.")
             self.train_button.setEnabled(False)
 
             from src.ml.model_trainer import ModelTrainer
 
+            username = "ksenia"
+
+            preprocessor = DataPreprocessor(
+            enrollment_csv=f"extracted_features/{username}/enrollment_features.csv",
+            dsl_dataset_csv="datasets/DSL-StrongPassword.csv",
+            username=username,
+            output_csv=f"datasets/{username}_training.csv")
+
             trainer = ModelTrainer(
-                csv_path="datasets/ksenia_training_2.csv",
+                csv_path=f"datasets/{username}_training_2.csv",
                 out_dir="models",
                 batch_size=64,
                 lr=1e-3
             )
 
-            self.worker = TrainingWorker(trainer)
-            self.worker.finished.connect(self.on_training_finished)
+            self.worker = TrainingWorker(trainer, preprocessor, username)
+            self.worker.dataProcFinished.connect(self.on_data_processing_finished)
+            self.worker.trainFinished.connect(self.on_training_finished)
             self.worker.start()
 
         except Exception as e:
@@ -274,8 +262,12 @@ class AuthenticationWindow(QWidget):
 
     def on_training_finished(self):
         self.training_status.setText("Training finished.")
-        self.train_button.setEnabled(True)
+        self.train_button.setEnabled(False)
         QMessageBox.information(self, "Training", "Model training finished successfully.")
+
+    def on_data_processing_finished(self):
+        self.training_status.setText("Data Processing finished. Training... Please wait.")
+        self.train_button.setEnabled(False)
     # =================================================================
     #  AUTHENTICATION MODE
     # =================================================================
