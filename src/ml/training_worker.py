@@ -14,7 +14,7 @@ class TrainingWorker(QThread):
         self.username = username
 
     def run(self):
-        #self.preprocessor.build_training_csv()
+        self.preprocessor.build_training_csv()
         self.dataProcFinished.emit()
         self.trainer.train()
         self.trainFinished.emit()

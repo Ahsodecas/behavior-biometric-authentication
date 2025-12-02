@@ -241,7 +241,7 @@ class AuthenticationWindow(QWidget):
 
             preprocessor = DataPreprocessor(
             enrollment_csv=f"extracted_features/{username}/enrollment_features.csv",
-            dsl_dataset_csv="datasets/DSL-StrongPassword.csv",
+            dsl_dataset_csv="datasets/DSL-StrongPasswordData.csv",
             username=username,
             output_csv=f"datasets/{username}_training.csv")
 
