@@ -167,14 +167,14 @@ class AuthenticationWindow(QWidget):
             username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
-            print("Features read: ")
-            print(self.data_utility.feature_extractor.key_features.all_features)
+            #print("Features read: ")
+            #print(self.data_utility.feature_extractor.key_features.all_features)
             filename = (
                 self.enroll_filename
                 if self.enroll_append else
                 f"{self.enroll_count}_{self.enroll_filename}"
             )
-            self.data_utility.generate_synthetic_features(username, filename, repetitions=10)
+            #self.data_utility.generate_synthetic_features(username, filename, repetitions=10)
 
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
@@ -245,7 +245,7 @@ class AuthenticationWindow(QWidget):
             output_csv=f"datasets/{username}_training.csv")
 
             trainer = ModelTrainer(
-                csv_path=f"datasets/{username}_training_2.csv",
+                csv_path=f"datasets/{username}_training.csv",
                 out_dir="models",
                 batch_size=64,
                 lr=1e-3
@@ -358,6 +358,7 @@ class AuthenticationWindow(QWidget):
                 self.data_utility.username = username
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
+                self.data_utility.save_raw_csv(filename="raw.csv")
                 self.data_utility.save_features_csv(filename="temp_features.csv")
             except Exception as e:
                 QMessageBox.critical(self, "Feature Error", str(e))

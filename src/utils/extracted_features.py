@@ -47,9 +47,9 @@ class ExtractedFeatures:
             row = df.iloc[0].to_dict()
 
             for key, val in row.items():
-                print("key: " + key + " val: " + str(val))
+                #print("key: " + key + " val: " + str(val))
                 # Handle metadata columns
-                if key in ["subject", "sessionInd", "rep", "generated"]:
+                if key in ["subject", "sessionIndex", "rep", "generated"]:
                     try:
                         if key == "subject":
                             username = val
@@ -101,8 +101,8 @@ class ExtractedFeatures:
                 features = {}
 
                 for key, val in row.items():
-                    print("key: " + key + " val: " + str(val))
-                    if key in ["subject", "sessionInd", "rep", "generated"]:
+                    #print("key: " + key + " val: " + str(val))
+                    if key in ["subject", "sessionIndex", "rep", "generated"]:
                         try:
                             if key == "subject":
                                 username = str(val)

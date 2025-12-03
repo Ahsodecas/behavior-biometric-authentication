@@ -59,7 +59,7 @@ class CMUDatasetTriplet(Dataset):
     def __init__(self, csv_path: str, scaler: Optional[StandardScaler] = None, preload: bool = True):
         self.df = pd.read_csv(csv_path)
         # basic column inference
-        expected_prefixes = ['subject', 'sessionInd', 'rep']
+        expected_prefixes = ['subject', 'sessionIndex', 'rep']
         cols = list(self.df.columns)
         # locate 'rep' column index
         if 'rep' in cols:

@@ -15,7 +15,7 @@ class DataPreprocessor:
       - Combining everything into a single CSV for model training
     """
 
-    def __init__(self, enrollment_csv: str, dsl_dataset_csv: str, username: str, output_csv: str, synth_reps=10):
+    def __init__(self, enrollment_csv: str, dsl_dataset_csv: str, username: str, output_csv: str, synth_reps=200):
         self.synth_reps = synth_reps
         self.data_utility = DataUtility()
         self.enrollment_csv = enrollment_csv
@@ -56,12 +56,7 @@ class DataPreprocessor:
             except Exception as e:
                 print(f"[WARNING] Failed to delete old synthetic file '{synthetic_file}': {e}")
 
-            # Load rows into feature extractor one-by-one
-            for _, row in df.iterrows():
-                try:
-                    self.data_utility.feature_extractor.load_row_into_feature_extractor(row)
-                except Exception as e:
-                    print(f"[WARNING] Failed to load row into feature extractor: {e}")
+            self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(enrollment_csv)
 
             # Generate synthetic rows
             try:

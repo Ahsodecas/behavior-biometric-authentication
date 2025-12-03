@@ -19,6 +19,8 @@ class ModelTrainer:
         # Load full dataset
         self.dataset = CMUDatasetTriplet(csv_path)
         self.input_dim = self.dataset.X.shape[1]
+        print(f"X:{self.dataset.X.shape}")
+        print(f"feature_cols: {self.dataset.feature_cols}")
 
         # Split into train and validation
         val_size = int(len(self.dataset) * val_split)

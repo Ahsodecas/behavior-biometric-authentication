@@ -272,7 +272,7 @@ class SyntheticFeaturesGenerator:
         channel_hold='hold'
         decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order, channel=channel_hold)
         self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold, generating_function="icdf"))
-        print(decisions_hold)
+        #print(decisions_hold)
         channel_dd='DD'
         decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_dd)
         self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd,generating_function="icdf"))
@@ -283,8 +283,8 @@ class SyntheticFeaturesGenerator:
 
         ordered_features = self.order_generated_features(K_sequence=K_sequence)
 
-        print("Generated features:")
-        print(self.generated_features)
+        #print("Generated features:")
+        #print(self.generated_features)
 
         return dict(ordered_features)
 
@@ -316,8 +316,8 @@ class SyntheticFeaturesGenerator:
                 ud_name = f"UD.{prev_key}.{curr_key}"
                 if ud_name in ud_dict:
                     ordered_features.append((ud_name, ud_dict[ud_name]))
-        print("Ordered features: ")
-        print(ordered_features)
+        #print("Ordered features: ")
+        #print(ordered_features)
         return ordered_features
 
 

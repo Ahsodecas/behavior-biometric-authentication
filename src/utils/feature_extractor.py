@@ -44,24 +44,25 @@ class FeatureExtractor:
         shift_pressed = False
 
         shift_keys = ['Shift', 'Shift_R', '\uE008', '16777248']
-        org_key = None
 
         for _, row in df.iterrows():
-            key = row['key'] or row['keysym']
-            key = str(key).lower()
+            raw_key = row['key'] or row['keysym']
             event_type = row['event_type']
             timestamp = row['timestamp']
 
-            if key in shift_keys:
+            if raw_key in shift_keys:
                 if event_type == 'press':
                     shift_pressed = True
                 elif event_type == 'release':
                     shift_pressed = False
-                    org_key = None
                 continue
 
+            # Normalize key name
+            key = str(raw_key)
+            if len(key) == 1:
+                key = key.lower()  # convert letters to lowercase
+            # Apply shift modifier if shift is pressed
             if shift_pressed:
-                org_key = key
                 key = f"Shift.{key}"
 
             # --- Handle key press ---
@@ -77,7 +78,7 @@ class FeatureExtractor:
                     features[ud_key] = timestamp - last_release_time
 
                 # Record this press
-                press_times[org_key if org_key is not None else key] = timestamp
+                press_times[key] = timestamp
                 last_press_key = key
                 last_press_time = timestamp
 
@@ -94,12 +95,10 @@ class FeatureExtractor:
 
         metadata = {
             "subject": self.username,
-            "sessionInd": 1,
+            "sessionIndex": 1,
             "generated": 0,
             "rep": self.rep_counter
         }
-        # is rep_counter needed here?
-        # should session_index be modified anywhere?
 
         self.key_features.update(metadata, features)
 
@@ -126,7 +125,7 @@ class FeatureExtractor:
 
         # Sort keys to ensure consistent CSV column order
         key_features_list = list(self.key_features.get_keys())
-        print(f"key_features_list: {key_features_list}")
+        #print(f"key_features_list: {key_features_list}")
         fieldnames = key_features_list
 
         mode = 'a' if append and os.path.exists(filename) else 'w'
@@ -139,7 +138,7 @@ class FeatureExtractor:
                 row = {}
                 for k in key_features_list:
                     v = self.key_features.get_key(k)
-                    print("key: " + k + " value: " + str(v))
+                    #print("key: " + k + " value: " + str(v))
                     if isinstance(v, (list, dict)):
                         row[k] = json.dumps(v, ensure_ascii=False)
                     else:
