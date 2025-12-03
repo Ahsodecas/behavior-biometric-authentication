@@ -47,7 +47,7 @@ class CMUDatasetTriplet(Dataset):
     """Load CMU-style CSV and produce triplets.
 
     Assumptions about CSV:
-      - It contains columns: subject, sessionIndex, rep, <feature columns...>
+      - It contains columns: subject, sessionInd, rep, <feature columns...>
       - Feature columns are numeric. All columns after `rep` are considered features.
       - If features already encode time-series (e.g., flattened timesteps), the dataset will treat each row
         as a sequence of length 1 with feature-dim = n_features. This keeps the LSTM pipeline working.
@@ -59,7 +59,7 @@ class CMUDatasetTriplet(Dataset):
     def __init__(self, csv_path: str, scaler: Optional[StandardScaler] = None, preload: bool = True):
         self.df = pd.read_csv(csv_path)
         # basic column inference
-        expected_prefixes = ['subject', 'sessionIndex', 'rep']
+        expected_prefixes = ['subject', 'sessionInd', 'rep']
         cols = list(self.df.columns)
         # locate 'rep' column index
         if 'rep' in cols:

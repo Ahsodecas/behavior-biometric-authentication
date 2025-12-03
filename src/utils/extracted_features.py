@@ -13,8 +13,8 @@ class ExtractedFeatures:
         self.data ={}
 
     def update(self, metadata, features):
-        self.metadata = metadata
-        self.features = features
+        self.metadata.update(metadata)
+        self.features.update(features)
         self.all_features.extend(list(features.items()))
         self.data = {**self.metadata, **self.features}
 
@@ -47,8 +47,9 @@ class ExtractedFeatures:
             row = df.iloc[0].to_dict()
 
             for key, val in row.items():
+                print("key: " + key + " val: " + str(val))
                 # Handle metadata columns
-                if key in ["subject", "sessionIndex", "rep", "generated"]:
+                if key in ["subject", "sessionInd", "rep", "generated"]:
                     try:
                         if key == "subject":
                             username = val

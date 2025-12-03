@@ -94,7 +94,7 @@ class FeatureExtractor:
 
         metadata = {
             "subject": self.username,
-            "sessionIndex": 1,
+            "sessionInd": 1,
             "generated": 0,
             "rep": self.rep_counter
         }

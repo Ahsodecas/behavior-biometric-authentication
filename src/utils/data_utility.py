@@ -25,16 +25,19 @@ class DataUtility:
         self.synthetic_features_generator.username = username
         self.synthetic_features_generator.genuine_features = self.feature_extractor.prepocess_features_for_synthesis()
         # add generation function and some parameters for it, change the loop to internal generator logic
-        for _ in range(0, repetitions):
+        for i in range(0, repetitions):
             generated_features = self.synthetic_features_generator.generate()
             #print("GENERATED FEATURES in DATA UTILITY:")
             #print(generated_features)
-            metadata = self.feature_extractor.key_features.metadata
-            metadata["subject"] = username
-            metadata["sessionInd"] = -1
-            metadata["generated"] = 1
-            metadata["rep"] = 0
-            self.feature_extractor.key_features.update(metadata=metadata, features=generated_features)
+            new_metadata = {"subject" : username,
+                            "sessionInd": -1,
+                            "generated" : 1,
+                            "rep": i}
+            # new_metadata["subject"] = username
+            # new_metadata["sessionInd"] = -1
+            # new_metadata["generated"] = 1
+            # new_metadata["rep"] = i
+            self.feature_extractor.key_features.update(metadata=new_metadata, features=generated_features)
             #print("GENERATED FEATURES in FEATURE EXTRACTOR:")
             #print(self.feature_extractor.key_features.features)
             self.save_features_csv(filename=filename,append=True)
