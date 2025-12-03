@@ -23,6 +23,7 @@ from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
+from src.ml.model_trainer import ModelTrainer
 
 
 # =====================================================================
@@ -234,8 +235,6 @@ class AuthenticationWindow(QWidget):
         try:
             self.training_status.setText("Data is processing.... Please wait.")
             self.train_button.setEnabled(False)
-
-            from src.ml.model_trainer import ModelTrainer
 
             username = "ksenia"
 
