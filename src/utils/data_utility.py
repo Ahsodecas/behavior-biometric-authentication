@@ -24,6 +24,8 @@ class DataUtility:
         self.feature_extractor.username = username
         self.synthetic_features_generator.username = username
         self.synthetic_features_generator.genuine_features = self.feature_extractor.prepocess_features_for_synthesis()
+        print("GENUINE FEATURES: ")
+        print(self.synthetic_features_generator.genuine_features)
         # add generation function and some parameters for it, change the loop to internal generator logic
         for i in range(0, repetitions):
             generated_features = self.synthetic_features_generator.generate()

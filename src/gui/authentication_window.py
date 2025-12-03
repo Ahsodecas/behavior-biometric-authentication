@@ -164,7 +164,7 @@ class AuthenticationWindow(QWidget):
         username = ""
 
         try:
-            username = self.data_utility.feature_extractor.key_features.load_csv_features(file_path)
+            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
             print("Features read: ")
