@@ -7,6 +7,11 @@ import numpy as np
 from datetime import datetime
 from src.utils.key_stroke_event import KeyStrokeEvent
 
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(CURRENT_DIR))
+
+# Common paths
+PATH_COLLECTED = os.path.join(PROJECT_ROOT, "collected_data")
 
 class DataCollector:
     def __init__(self, username=None):
@@ -14,7 +19,7 @@ class DataCollector:
         self.session_start_time = None
         self.last_event_time = None         # For inter-event interval
         self.username = username
-        self.data_dir = "collected_data"
+        self.data_dir = PATH_COLLECTED
         self._create_data_directory()
         self.rep_counter = 0
 

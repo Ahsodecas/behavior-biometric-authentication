@@ -32,8 +32,14 @@ from src.ml.model_trainer import ModelTrainer
 #  CONSTANTS & GLOBAL CONFIG
 # =====================================================================
 
-MODEL_PATH = "models/snn_final.pt"
 
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(ROOT_DIR))
+PATH_MODELS = os.path.join(PROJECT_ROOT, "models")
+PATH_DATASETS = os.path.join(PROJECT_ROOT, "datasets")
+PATH_EXTRACTED = os.path.join(PROJECT_ROOT, "extracted_features")
+
+MODEL_PATH = os.path.join(PATH_MODELS, "snn_final.pt")
 
 # =====================================================================
 #  MAIN AUTHENTICATION WINDOW CLASS
@@ -56,6 +62,7 @@ class AuthenticationWindow(QWidget):
             self.enroll_filename = "enrollment_features.csv"
             self.enroll_append = True
             self.password_fixed = ".tie5Roanl"
+            self.username = ""
 
             # Core helpers
             self.data_utility = DataUtility()
@@ -105,6 +112,7 @@ class AuthenticationWindow(QWidget):
     def submit_enrollment_sample(self):
         try:
             username = self.username_entry.text()
+            self.username = username
             password = self.password_entry.text()
 
             # Validation
@@ -122,9 +130,8 @@ class AuthenticationWindow(QWidget):
 
             # Feature extraction
             self.data_utility.extract_features(username)
-            filename = (
-                f"enrollment_features_1.csv"
-            )
+            filename = "enrollment_features.csv"
+
 
             self.data_utility.save_features_csv(
                 filename=filename,
@@ -237,17 +244,18 @@ class AuthenticationWindow(QWidget):
             self.training_status.setText("Data is processing.... Please wait.")
             self.train_button.setEnabled(False)
 
-            username = "ksenia"
+            username = self.username
 
             preprocessor = DataPreprocessor(
-            enrollment_csv=f"extracted_features/{username}/enrollment_features.csv",
-            dsl_dataset_csv="datasets/DSL-StrongPasswordData.csv",
-            username=username,
-            output_csv=f"datasets/{username}_training.csv")
+                enrollment_csv=os.path.join(PATH_EXTRACTED, username, "enrollment_features.csv"),
+                dsl_dataset_csv=os.path.join(PATH_DATASETS, "DSL-StrongPasswordData.csv"),
+                username=username,
+                output_csv=os.path.join(PATH_DATASETS, f"{username}_training.csv")
+            )
 
             trainer = ModelTrainer(
-                csv_path=f"datasets/{username}_training.csv",
-                out_dir="models",
+                csv_path=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
+                out_dir=PATH_MODELS,
                 batch_size=64,
                 lr=1e-3
             )
