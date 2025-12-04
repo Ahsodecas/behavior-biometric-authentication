@@ -4,6 +4,8 @@
 
 import os
 import csv
+from datetime import time
+
 import torch
 import numpy as np
 
@@ -23,6 +25,7 @@ from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
+from src.ml.model_trainer import ModelTrainer
 
 
 # =====================================================================
@@ -120,9 +123,7 @@ class AuthenticationWindow(QWidget):
             # Feature extraction
             self.data_utility.extract_features(username)
             filename = (
-                self.enroll_filename
-                if self.enroll_append else
-                f"{self.enroll_count}_{self.enroll_filename}"
+                f"enrollment_features_1.csv"
             )
 
             self.data_utility.save_features_csv(
@@ -163,11 +164,11 @@ class AuthenticationWindow(QWidget):
         username = ""
 
         try:
-            self.data_utility.feature_extractor.key_features.load_csv_features(file_path)
+            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
-            print("Features read: ")
-            print(self.data_utility.feature_extractor.key_features.all_features)
+            #print("Features read: ")
+            #print(self.data_utility.feature_extractor.key_features.all_features)
             filename = (
                 self.enroll_filename
                 if self.enroll_append else
@@ -232,10 +233,9 @@ class AuthenticationWindow(QWidget):
     def start_model_training(self):
         """Triggered when user presses 'Start Training'."""
         try:
+
             self.training_status.setText("Data is processing.... Please wait.")
             self.train_button.setEnabled(False)
-
-            from src.ml.model_trainer import ModelTrainer
 
             username = "ksenia"
 
@@ -246,12 +246,13 @@ class AuthenticationWindow(QWidget):
             output_csv=f"datasets/{username}_training.csv")
 
             trainer = ModelTrainer(
-                csv_path=f"datasets/{username}_training_2.csv",
+                csv_path=f"datasets/{username}_training.csv",
                 out_dir="models",
                 batch_size=64,
                 lr=1e-3
             )
 
+            print(f"1")
             self.worker = TrainingWorker(trainer, preprocessor, username)
             self.worker.dataProcFinished.connect(self.on_data_processing_finished)
             self.worker.trainFinished.connect(self.on_training_finished)
@@ -359,9 +360,11 @@ class AuthenticationWindow(QWidget):
                 self.data_utility.username = username
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
+                self.data_utility.save_raw_csv(filename="raw.csv")
                 self.data_utility.save_features_csv(filename="temp_features.csv")
             except Exception as e:
                 QMessageBox.critical(self, "Feature Error", str(e))
+                self.data_utility.reset()
                 self.password_entry.clear()
                 return
 
@@ -369,21 +372,28 @@ class AuthenticationWindow(QWidget):
                 success, dist, message = self.authenticator.authenticate(username, password, features)
             except Exception as e:
                 QMessageBox.critical(self, "Model Error", str(e))
+                self.data_utility.reset()
                 self.password_entry.clear()
                 return
 
             if success:
-                QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                QMessageBox.information(self, "Authentication", f"{message}\n")#Distance = {dist:.4f}")
                 #try: self.switch_to_background_mode()
                 #except Exception as e:
                 #    QMessageBox.critical(self, "Background Mode Error", str(e))
+
+                self.data_utility.reset()
                 self.password_entry.clear()
             else:
-                QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                QMessageBox.critical(self, "Authentication", f"{message}\n")#Distance = {dist:.4f}")
+
+                self.data_utility.reset()
                 self.password_entry.clear()
 
         except Exception as e:
             QMessageBox.critical(self, "Authentication Error", str(e))
+
+            self.data_utility.reset()
             self.password_entry.clear()
 
 

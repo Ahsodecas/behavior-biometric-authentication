@@ -15,10 +15,13 @@ class CMUDatasetTriplet(Dataset):
         self.df = pd.read_csv(csv_path)
 
         cols = list(self.df.columns)
-        feat_start = cols.index("rep") + 1 if "rep" in cols else 3
-
+        feat_start = cols.index("generated") + 1 if "generated" in cols else 4
+        print(f"feat_start: {feat_start}")
         self.meta_cols = cols[:feat_start]
         self.feature_cols = cols[feat_start:]
+        print(f"df.columns): {len(self.df.columns)}")
+        print(f"feature_cols: {len(self.feature_cols)}")
+        print(f"meta_cols: {len(self.meta_cols)}")
 
         self.df["subject"] = self.df["subject"].astype(str)
 
@@ -26,6 +29,9 @@ class CMUDatasetTriplet(Dataset):
 
         self.scaler = scaler if scaler else StandardScaler()
         X = self.scaler.fit_transform(X) if scaler is None else self.scaler.transform(X)
+
+
+        print(f"X: {X.shape}")
 
         self.X = X.astype(np.float32)
         self.y = self.df["subject"].values

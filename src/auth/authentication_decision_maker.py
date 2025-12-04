@@ -3,7 +3,8 @@
 import os
 import torch
 import numpy as np
-from datasets.test import TripletSNN, CMUDatasetTriplet
+from src.ml.snn_model import TripletSNN
+from src.ml.triplet_dataset import CMUDatasetTriplet
 import pandas as pd
 
 
@@ -28,25 +29,79 @@ class AuthenticationDecisionMaker:
     # ------------ LOAD MODEL + SCALER + REF SAMPLE ----------
     # ---------------------------------------------------------
     def load_model(self, ckpt_path):
+        # -------------------------------
+        # Checkpoint file must exist
+        # -------------------------------
         if not os.path.exists(ckpt_path):
             raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
 
-        # Load dataset (to obtain scaler + feature columns)
-        tmp_dataset = CMUDatasetTriplet("datasets/ksenia_training_2.csv")
+        # -------------------------------
+        # Load TRAINING dataset to recover
+        #   - scaler
+        #   - feature columns
+        # -------------------------------
+        training_csv = "datasets/ksenia_training.csv"
+
+        if not os.path.exists(training_csv):
+            raise FileNotFoundError(f"Training CSV not found: {training_csv}")
+
+        tmp_dataset = CMUDatasetTriplet(training_csv)
         input_dim = tmp_dataset.X.shape[1]
+        print(f"X: {tmp_dataset.X.shape}")
+        print(f"Input dimension: {input_dim}")
+        print(f"feature_cols: {tmp_dataset.feature_cols}")
 
         self.scaler = tmp_dataset.scaler
         self.feature_cols = tmp_dataset.feature_cols
 
-        if tmp_dataset.X.shape[0] < 40:
-            raise ValueError("Need at least 40 samples to compute reference embedding.")
+        # -------------------------------
+        # Load CSV again (unscaled) so we
+        # can filter by subject/generated
+        # -------------------------------
+        df = pd.read_csv(training_csv)
 
-        self.ref_sample = tmp_dataset.X[:40].mean(axis=0).astype(np.float32)
+        # Filter reference samples:
+        ref_df = df[(df["subject"] == "ksenia") & (df["generated"] == 0)]
 
-        # Build model
+        if ref_df.empty:
+            raise ValueError(
+                "No reference samples found: need rows where subject='ksenia' and generated=0."
+            )
+
+        # -------------------------------
+        # Extract raw feature matrix
+        # -------------------------------
+        try:
+            ref_matrix_raw = ref_df[self.feature_cols].to_numpy(dtype=np.float32)
+        except KeyError as e:
+            raise KeyError(
+                f"Training CSV is missing feature column required by model: {e}"
+            )
+
+        # -------------------------------
+        # Normalize using SAME scaler
+        # -------------------------------
+        ref_matrix_norm = self.scaler.transform(ref_matrix_raw)
+
+        # Compute reference sample as mean vector
+        self.ref_sample = ref_matrix_norm.mean(axis=0).astype(np.float32)
+
+        print("Reference sample computed from real Ksenia samples.")
+        print(self.ref_sample)
+
+        # -------------------------------
+        # Load Triplet network
+        # -------------------------------
         model = TripletSNN(input_dim=input_dim)
         ckpt = torch.load(ckpt_path, map_location=self.device)
-        model.load_state_dict(ckpt["model_state"])
+
+        # Support both "model_state" and older checkpoints
+        if "model_state" in ckpt:
+            state = ckpt["model_state"]
+        else:
+            state = ckpt
+
+        model.load_state_dict(state)
         model.to(self.device)
         model.eval()
 
@@ -97,9 +152,10 @@ class AuthenticationDecisionMaker:
         for col in self.feature_cols:
 
             if col not in feature_dict:
-                return False, float("inf"), f"Missing feature in DataCollector: {col}"
-
-            val = feature_dict[col]
+                val = 0
+                #return False, float("inf"), f"Missing feature in DataCollector: {col}"
+            else:
+                val = feature_dict[col]
 
             # Convert to numeric float
             try:
@@ -127,7 +183,7 @@ class AuthenticationDecisionMaker:
         except Exception as e:
             return False, float("inf"), f"Scaler transform failed: {e}"
 
-        print(normalized_vec)
+        #print(normalized_vec)
         dist = self.compute_distance(normalized_vec)
 
         if dist < self.threshold:

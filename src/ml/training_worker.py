@@ -16,5 +16,6 @@ class TrainingWorker(QThread):
     def run(self):
         self.preprocessor.build_training_csv()
         self.dataProcFinished.emit()
+        self.trainer.initialize()
         self.trainer.train()
         self.trainFinished.emit()

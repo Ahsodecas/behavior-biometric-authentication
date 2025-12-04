@@ -12,37 +12,74 @@ class ModelTrainer:
 
     def __init__(self, csv_path, out_dir, batch_size=64, lr=1e-3,
                  hidden=128, embedding=128, dropout=0.3, margin=1.0, val_split=0.1):
-
+        # Store config but do not initialize everything yet
+        self.csv_path = csv_path
         self.out_dir = out_dir
-        os.makedirs(out_dir, exist_ok=True)
+        self.batch_size = batch_size
+        self.lr = lr
+        self.hidden = hidden
+        self.embedding = embedding
+        self.dropout = dropout
+        self.margin = margin
+        self.val_split = val_split
+
+        # Placeholders for objects to be initialized later
+        self.dataset = None
+        self.train_dataset = None
+        self.val_dataset = None
+        self.train_loader = None
+        self.val_loader = None
+        self.model = None
+        self.device = None
+        self.optimizer = None
+        self.criterion = None
+
+    def initialize(self):
+        """Initialize dataset, dataloaders, model, device, optimizer, and loss."""
+        os.makedirs(self.out_dir, exist_ok=True)
 
         # Load full dataset
-        self.dataset = CMUDatasetTriplet(csv_path)
+        self.dataset = CMUDatasetTriplet(self.csv_path)
         self.input_dim = self.dataset.X.shape[1]
+        print(f"X:{self.dataset.X.shape}")
+        print(f"feature_cols: {self.dataset.feature_cols}")
 
         # Split into train and validation
-        val_size = int(len(self.dataset) * val_split)
+        val_size = int(len(self.dataset) * self.val_split)
         train_size = len(self.dataset) - val_size
         self.train_dataset, self.val_dataset = random_split(self.dataset, [train_size, val_size])
 
         # DataLoaders
-        self.train_loader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_triplet)
-        self.val_loader = DataLoader(self.val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_triplet)
+        self.train_loader = DataLoader(
+            self.train_dataset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            collate_fn=collate_triplet
+        )
+        self.val_loader = DataLoader(
+            self.val_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            collate_fn=collate_triplet
+        )
 
         # Model, device, optimizer, criterion
         self.model = TripletSNN(
             input_dim=self.input_dim,
-            lstm_hidden=hidden,
-            embedding_dim=embedding,
-            dropout=dropout
+            lstm_hidden=self.hidden,
+            embedding_dim=self.embedding,
+            dropout=self.dropout
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
 
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.criterion = nn.TripletMarginLoss(margin=margin, p=2)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        self.criterion = nn.TripletMarginLoss(margin=self.margin, p=2)
 
     def train(self, epochs=1):
+        if self.model is None:
+            raise RuntimeError("ModelTrainer is not initialized. Call `initialize()` first.")
+
         print("Training on", self.device)
 
         for epoch in range(1, epochs + 1):

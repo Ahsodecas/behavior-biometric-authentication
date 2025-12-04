@@ -18,23 +18,29 @@ class DataUtility:
         self.data_collector.username = username
         self.feature_extractor.username = username
         self.feature_extractor.raw_key_data = self.data_collector.data
+        self.data_collector.save_key_raw_csv(filename="raw.csv")
         self.feature_extractor.extract_key_features()
 
     def generate_synthetic_features(self, username, filename, repetitions=10):
         self.feature_extractor.username = username
         self.synthetic_features_generator.username = username
         self.synthetic_features_generator.genuine_features = self.feature_extractor.prepocess_features_for_synthesis()
+        #print("GENUINE FEATURES: ")
+        #print(self.synthetic_features_generator.genuine_features)
         # add generation function and some parameters for it, change the loop to internal generator logic
-        for _ in range(0, repetitions):
+        for i in range(0, repetitions):
             generated_features = self.synthetic_features_generator.generate()
             #print("GENERATED FEATURES in DATA UTILITY:")
             #print(generated_features)
-            metadata = self.feature_extractor.key_features.metadata
-            metadata["subject"] = username
-            metadata["sessionInd"] = -1
-            metadata["generated"] = 1
-            metadata["rep"] = 0
-            self.feature_extractor.key_features.update(metadata=metadata, features=generated_features)
+            new_metadata = {"subject" : username,
+                            "sessionIndex": -1,
+                            "generated" : 1,
+                            "rep": i}
+            # new_metadata["subject"] = username
+            # new_metadata["sessionIndex"] = -1
+            # new_metadata["generated"] = 1
+            # new_metadata["rep"] = i
+            self.feature_extractor.key_features.update(metadata=new_metadata, features=generated_features)
             #print("GENERATED FEATURES in FEATURE EXTRACTOR:")
             #print(self.feature_extractor.key_features.features)
             self.save_features_csv(filename=filename,append=True)

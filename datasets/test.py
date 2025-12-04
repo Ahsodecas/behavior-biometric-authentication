@@ -47,7 +47,7 @@ class CMUDatasetTriplet(Dataset):
     """Load CMU-style CSV and produce triplets.
 
     Assumptions about CSV:
-      - It contains columns: subject, sessionIndex, rep, <feature columns...>
+      - It contains columns: subject, sessionInd, rep, <feature columns...>
       - Feature columns are numeric. All columns after `rep` are considered features.
       - If features already encode time-series (e.g., flattened timesteps), the dataset will treat each row
         as a sequence of length 1 with feature-dim = n_features. This keeps the LSTM pipeline working.
