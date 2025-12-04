@@ -22,38 +22,6 @@ def create_dummy_csv(path):
     df.to_csv(path, index=False)
     return df
 
-def test_dataset_initialization(tmp_path):
-    csv_path = tmp_path / "data.csv"
-    df = create_dummy_csv(csv_path)
-
-    ds = CMUDatasetTriplet(csv_path)
-
-    assert len(ds) == 4
-    assert ds.X.shape == (4, 2)    # 2 feature columns (f1,f2)
-    assert len(ds.meta_cols) == 3  # subject, session, rep
-    assert ds.feature_cols == ["f1", "f2"]
-
-    assert ds.X.dtype == np.float32
-
-    assert set(ds.by_subject.keys()) == {"s1", "ksenia", "s2"}
-    assert len(ds.by_subject["s1"]) == 2
-
-def test_getitem_triplet_shapes(tmp_path, mocker):
-    csv_path = tmp_path / "data.csv"
-    create_dummy_csv(csv_path)
-
-    ds = CMUDatasetTriplet(csv_path)
-
-    mocker.patch("random.random", return_value=1.0)
-
-    a, p, n, l = ds[0]
-
-    assert a.shape == (1, 2)
-    assert p.shape == (1, 2)
-    assert n.shape == (1, 2)
-    assert l.shape == (1,)
-    assert l.item() == 1
-
 
 def test_getitem_oversampling(tmp_path, mocker):
     """

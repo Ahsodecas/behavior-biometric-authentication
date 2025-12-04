@@ -56,7 +56,7 @@ class DataPreprocessor:
             except Exception as e:
                 print(f"[WARNING] Failed to delete old synthetic file '{synthetic_file}': {e}")
 
-            self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(enrollment_csv)
+            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(self.enrollment_csv)
 
             # Generate synthetic rows
             try:
@@ -89,7 +89,6 @@ class DataPreprocessor:
             if enroll_df is None:
                 print("[FATAL] No enrollment dataset. Cannot proceed.")
                 return None
-
             print("[DataProcessor] Generating synthetic samples via DataUtility...")
             synth_df = self.generate_synthetic(self.enrollment_csv, self.username)
             if synth_df is None:

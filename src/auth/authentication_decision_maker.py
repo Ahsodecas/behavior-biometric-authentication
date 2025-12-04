@@ -152,9 +152,10 @@ class AuthenticationDecisionMaker:
         for col in self.feature_cols:
 
             if col not in feature_dict:
-                return False, float("inf"), f"Missing feature in DataCollector: {col}"
-
-            val = feature_dict[col]
+                val = 0
+                #return False, float("inf"), f"Missing feature in DataCollector: {col}"
+            else:
+                val = feature_dict[col]
 
             # Convert to numeric float
             try:

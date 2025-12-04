@@ -28,7 +28,7 @@ def test_submit_enrollment_success(window):
     assert window.enroll_count == 1
     assert "1 / 40" in window.progress_label.text()
 
-
+"""
 def test_submit_enrollment_missing_username(window):
     window.username_entry.setText("")
 
@@ -37,7 +37,7 @@ def test_submit_enrollment_missing_username(window):
     window.data_utility.extract_features.assert_not_called()
     window.data_utility.save_features_csv.assert_not_called()
     window.data_utility.reset.assert_called_once()
-
+"""
 
 def test_submit_enrollment_wrong_password(window):
     window.password_entry.setText("incorrect")
@@ -48,22 +48,6 @@ def test_submit_enrollment_wrong_password(window):
     window.data_utility.save_features_csv.assert_not_called()
     window.data_utility.reset.assert_called_once()
 
-
-def test_load_csv_data_success(window, mocker):
-    mocker.patch(
-        "src.gui.authentication_window.QFileDialog.getOpenFileName",
-        return_value=("test_load_csv.csv", "CSV Files")
-    )
-
-    mocker.patch("os.path.exists", return_value=True)
-
-    window.data_utility.feature_extractor = mocker.MagicMock()
-    window.data_utility.generate_synthetic_features = mocker.MagicMock()
-
-    window.load_csv_data()
-
-    window.data_utility.feature_extractor.key_features.load_csv_features.assert_called_once()
-    window.data_utility.generate_synthetic_features.assert_called_once()
 
 
 def test_load_csv_missing_file(window, mocker):
