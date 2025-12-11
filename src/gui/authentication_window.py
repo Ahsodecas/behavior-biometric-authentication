@@ -250,7 +250,8 @@ class AuthenticationWindow(QWidget):
                 enrollment_csv=os.path.join(PATH_EXTRACTED, username, "enrollment_features.csv"),
                 dsl_dataset_csv=os.path.join(PATH_DATASETS, "DSL-StrongPasswordData.csv"),
                 username=username,
-                output_csv=os.path.join(PATH_DATASETS, f"{username}_training.csv")
+                output_csv=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
+                synth_reps=0
             )
 
             trainer = ModelTrainer(
