@@ -20,11 +20,11 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
 from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
-from src.auth.security_controller import SecurityController
 from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
+from src.auth.background_auth_manager import BackgroundAuthManager
 from src.ml.model_trainer import ModelTrainer
 
 
@@ -66,7 +66,6 @@ class AuthenticationWindow(QWidget):
 
             # Core helpers
             self.data_utility = DataUtility()
-            self.security_controller = SecurityController(threshold=0.3)
             self.authenticator = AuthenticationDecisionMaker(threshold=0.3)
 
             # UI setup
@@ -366,6 +365,7 @@ class AuthenticationWindow(QWidget):
                 return
 
             try:
+                self.username = username
                 self.data_utility.username = username
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
@@ -386,15 +386,15 @@ class AuthenticationWindow(QWidget):
                 return
 
             if success:
-                QMessageBox.information(self, "Authentication", f"{message}\n")#Distance = {dist:.4f}")
-                #try: self.switch_to_background_mode()
-                #except Exception as e:
-                #    QMessageBox.critical(self, "Background Mode Error", str(e))
+                QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                try: self.switch_to_background_mode()
+                except Exception as e:
+                    QMessageBox.critical(self, "Background Mode Error", str(e))
 
                 self.data_utility.reset()
                 self.password_entry.clear()
             else:
-                QMessageBox.critical(self, "Authentication", f"{message}\n")#Distance = {dist:.4f}")
+                QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
 
                 self.data_utility.reset()
                 self.password_entry.clear()
@@ -436,6 +436,54 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Mode Change Error", str(e))
 
+        # Add this method inside the AuthenticationWindow class
+
+    def switch_to_background_mode(self):
+        """
+        Minimizes the main window and opens a small floating window
+        in the bottom-right corner showing live authentication status.
+        """
+        try:
+            # Create floating window
+            self.bg_window = QWidget()
+            self.bg_window.setWindowTitle("Auth Status")
+            self.bg_window.setFixedSize(260, 140)
+            self.bg_window.setWindowFlags(
+                Qt.WindowStaysOnTopHint |
+                Qt.FramelessWindowHint |
+                Qt.Tool
+            )
+
+            layout = QVBoxLayout(self.bg_window)
+
+            label = QLabel("Authentication Running...")
+            label.setAlignment(Qt.AlignCenter)
+
+            self.bg_status_label = QLabel("Extracting features...")
+            self.bg_status_label.setAlignment(Qt.AlignCenter)
+
+            layout.addWidget(label)
+            layout.addWidget(self.bg_status_label)
+
+            # Move to bottom-right of screen
+            screen = QApplication.primaryScreen().availableGeometry()
+            x = screen.width() - self.bg_window.width() - 20
+            y = screen.height() - self.bg_window.height() - 20
+            self.bg_window.move(x, y)
+
+            self.bg_window.show()
+            self.hide()  # hide main window
+
+            self.bg_manager = BackgroundAuthManager(
+                username=self.username,
+                authenticator_model_path=MODEL_PATH,
+                interval=10
+            )
+            self.bg_manager.status_update.connect(self.bg_status_label.setText)
+            self.bg_manager.start()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Background Mode Error", str(e))
 
     # =================================================================
     #  UI UTILITY FUNCTIONS

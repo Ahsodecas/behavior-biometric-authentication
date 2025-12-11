@@ -187,8 +187,8 @@ class AuthenticationDecisionMaker:
         dist = self.compute_distance(normalized_vec)
 
         if dist < self.threshold:
-            return True, dist, f"Authenticated successfully.\nDistance: {dist}"
+            return True, dist, "Authenticated successfully."
         else:
-            return False, dist, f"Authentication failed.\nDistance: {dist}"
+            return False, dist, "Authentication failed."
 
 

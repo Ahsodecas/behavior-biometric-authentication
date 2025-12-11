@@ -1,15 +1,24 @@
 from src.utils.data_collector import DataCollector
 from src.utils.feature_extractor import FeatureExtractor
 from src.utils.synthetic_features_generator import SyntheticFeaturesGenerator
+from src.utils.mouse_data_collector import MouseDataCollector
 
 class DataUtility:
-    def __init__(self):
+    def __init__(self, username=None):
         self.data_collector = DataCollector()
         self.feature_extractor = FeatureExtractor()
         self.synthetic_features_generator = SyntheticFeaturesGenerator()
+        self.mouse_data_collector = MouseDataCollector(username=username)
+
 
     def start(self):
         self.data_collector.start_session()
+
+    def start_background_collection(self):
+        self.mouse_data_collector.start()
+
+    def stop_background_collection(self):
+        self.mouse_data_collector.stop()
 
     def feed_key_event(self, event, event_type):
         self.data_collector.collect_key_event(event, event_type)
@@ -50,6 +59,9 @@ class DataUtility:
 
     def save_features_csv(self, filename=None, append=False):
         self.feature_extractor.save_key_features_csv(filename, append)
+
+    def save_mouse_raw_csv(self, filename=None):
+        self.mouse_data_collector.save_to_csv(filename)
 
     def reset(self):
         self.data_collector.clear_for_next_rep()
