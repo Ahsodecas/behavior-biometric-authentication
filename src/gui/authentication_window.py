@@ -39,7 +39,6 @@ PATH_MODELS = os.path.join(PROJECT_ROOT, "models")
 PATH_DATASETS = os.path.join(PROJECT_ROOT, "datasets")
 PATH_EXTRACTED = os.path.join(PROJECT_ROOT, "extracted_features")
 
-MODEL_PATH = os.path.join(PATH_MODELS, "snn_final.pt")
 
 # =====================================================================
 #  MAIN AUTHENTICATION WINDOW CLASS
@@ -55,25 +54,116 @@ class AuthenticationWindow(QWidget):
             super().__init__()
             self.setWindowTitle("Authentication App")
 
-            # State variables
-            self.mode = "enrollment"
+            # ---------------- State ----------------
+            self.mode = "landing"  # landing | enrollment | training | authentication
+            self.username = None
+
             self.enroll_target = 40
             self.enroll_count = 0
             self.enroll_filename = "enrollment_features.csv"
             self.enroll_append = True
             self.password_fixed = ".tie5Roanl"
-            self.username = ""
 
-            # Core helpers
+            # ---------------- Core helpers ----------------
             self.data_utility = DataUtility()
             self.authenticator = AuthenticationDecisionMaker(threshold=0.3)
 
             # UI setup
             self.setup_layout()
-            self.setup_enrollment_mode()
+            self.setup_landing_page()
 
         except Exception as e:
             QMessageBox.critical(self, "Init Error", str(e))
+
+    # =====================================================
+    # LANDING PAGE (USERNAME + LOGIN / REGISTER)
+    # =====================================================
+    def setup_landing_page(self):
+        self.clear_layout()
+        self.resize(700, 450)
+        self.center_on_screen()
+
+        card = self.make_card()
+        card.setMinimumWidth(520)
+        card.setMinimumHeight(320)
+
+        layout = QVBoxLayout(card)
+        layout.setSpacing(24)
+        layout.setContentsMargins(40, 40, 40, 40)
+
+        # Title
+        title = QLabel("Keystroke Authentication")
+        title.setProperty("class", "title")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        # Subtitle
+        subtitle = QLabel(
+            "Secure user verification using behavioral biometrics"
+        )
+        subtitle.setProperty("class", "instr")
+        subtitle.setAlignment(Qt.AlignCenter)
+        layout.addWidget(subtitle)
+
+        # Username field
+        self.username_entry = QLineEdit()
+        self.username_entry.setPlaceholderText("Enter your username")
+        self.username_entry.setObjectName("landing-username")
+        layout.addWidget(self.username_entry)
+
+        # Buttons
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(16)
+
+        login_btn = QPushButton("Login")
+        login_btn.setProperty("class", "primary")
+        login_btn.clicked.connect(self.handle_login)
+
+        register_btn = QPushButton("Register")
+        register_btn.setProperty("class", "secondary")
+        register_btn.clicked.connect(self.handle_register)
+
+        btn_row.addStretch()
+        btn_row.addWidget(login_btn)
+        btn_row.addWidget(register_btn)
+        btn_row.addStretch()
+
+        layout.addLayout(btn_row)
+
+        self.layout.addStretch()
+        self.layout.addWidget(card, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
+
+    def handle_register(self):
+        username = self.username_entry.text().strip()
+        if not username:
+            QMessageBox.warning(self, "Register", "Please enter a username")
+            return
+
+        self.username = username
+        self.enroll_count = 0
+        self.mode = "enrollment"
+        self.setup_enrollment_mode()
+
+    def handle_login(self):
+        username = self.username_entry.text().strip()
+        if not username:
+            QMessageBox.warning(self, "Login", "Please enter a username")
+            return
+
+        model_path = os.path.join(PATH_MODELS, f"{username}_snn.pt")
+        if not os.path.exists(model_path):
+            QMessageBox.information(
+                self,
+                "No Model",
+                "No trained model found. Please register first."
+            )
+            return
+
+        self.username = username
+        self.mode = "authentication"
+        self.authenticator.load_model(model_path)
+        self.setup_authentication_mode()
 
 
     # =================================================================
@@ -107,54 +197,30 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Setup Error", str(e))
 
-
     def submit_enrollment_sample(self):
-        try:
-            username = self.username_entry.text()
-            self.username = username
-            password = self.password_entry.text()
+        password = self.password_entry.text()
 
-            # Validation
-            if not username:
-                QMessageBox.warning(self, "Enrollment", "Enter a username.")
-                self.password_entry.clear()
-                self.data_utility.reset()
-                return
-
-            if password != self.password_fixed:
-                QMessageBox.warning(self, "Enrollment", "Password does not match.")
-                self.password_entry.clear()
-                self.data_utility.reset()
-                return
-
-            # Feature extraction
-            self.data_utility.extract_features(username)
-            filename = "enrollment_features.csv"
-
-
-            self.data_utility.save_features_csv(
-                filename=filename,
-                append=self.enroll_append
-            )
-
-            # Update progress
-            self.enroll_count += 1
-            self.progress_label.setText(
-                f"Samples collected: {self.enroll_count} / {self.enroll_target}"
-            )
-
+        if password != self.password_fixed:
+            QMessageBox.warning(self, "Enrollment", "Password does not match")
             self.password_entry.clear()
-            self.data_utility.reset()
+            self.data_utility.reset(failed=True)
+            return
 
-            if self.enroll_count >= self.enroll_target:
-                QMessageBox.information(
-                    self,
-                    "Enrollment Complete",
-                    f"Collected {self.enroll_target} samples."
-                )
+        self.data_utility.extract_features(self.username)
+        self.data_utility.save_features_csv(self.enroll_filename, append=True)
 
-        except Exception as e:
-            QMessageBox.critical(self, "Enrollment Error", str(e))
+        self.enroll_count += 1
+        self.progress_label.setText(
+            f"Samples collected: {self.enroll_count} / {self.enroll_target}"
+        )
+
+        self.password_entry.clear()
+        self.data_utility.reset()
+
+        if self.enroll_count >= self.enroll_target:
+            QMessageBox.information(self, "Enrollment", "Enrollment complete")
+            self.mode = "training"
+            self.setup_training_mode()
 
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
@@ -246,7 +312,7 @@ class AuthenticationWindow(QWidget):
             username = self.username
 
             preprocessor = DataPreprocessor(
-                enrollment_csv=os.path.join(PATH_EXTRACTED, username, "enrollment_features.csv"),
+                enrollment_csv=os.path.join(PATH_EXTRACTED, username, f"enrollment_features.csv"),
                 dsl_dataset_csv=os.path.join(PATH_DATASETS, "DSL-StrongPasswordData.csv"),
                 username=username,
                 output_csv=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
@@ -256,6 +322,7 @@ class AuthenticationWindow(QWidget):
             trainer = ModelTrainer(
                 csv_path=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
                 out_dir=PATH_MODELS,
+                username=username,
                 batch_size=64,
                 lr=1e-3
             )
@@ -273,6 +340,7 @@ class AuthenticationWindow(QWidget):
         self.training_status.setText("Training finished.")
         self.train_button.setEnabled(False)
         QMessageBox.information(self, "Training", "Model training finished successfully.")
+        self.on_mode_changed("Authentication")
 
     def on_data_processing_finished(self):
         self.training_status.setText("Data Processing finished. Training... Please wait.")
@@ -373,7 +441,7 @@ class AuthenticationWindow(QWidget):
                 self.data_utility.save_features_csv(filename="temp_features.csv")
             except Exception as e:
                 QMessageBox.critical(self, "Feature Error", str(e))
-                self.data_utility.reset()
+                self.data_utility.reset(failed=True)
                 self.password_entry.clear()
                 return
 
@@ -381,7 +449,7 @@ class AuthenticationWindow(QWidget):
                 success, dist, message = self.authenticator.authenticate(username, password, features)
             except Exception as e:
                 QMessageBox.critical(self, "Model Error", str(e))
-                self.data_utility.reset()
+                self.data_utility.reset(failed=True)
                 self.password_entry.clear()
                 return
 
@@ -396,13 +464,13 @@ class AuthenticationWindow(QWidget):
             else:
                 QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
 
-                self.data_utility.reset()
+                self.data_utility.reset(failed=True)
                 self.password_entry.clear()
 
         except Exception as e:
             QMessageBox.critical(self, "Authentication Error", str(e))
 
-            self.data_utility.reset()
+            self.data_utility.reset(failed=True)
             self.password_entry.clear()
 
 
@@ -425,7 +493,7 @@ class AuthenticationWindow(QWidget):
             elif text == "Authentication":
                 self.mode = "authentication"
                 try:
-                    self.authenticator.load_model(MODEL_PATH)
+                    self.authenticator.load_model(os.path.join(PATH_MODELS, f"{self.username}_snn.pt"))
                 except Exception as e:
                     QMessageBox.critical(self, "Model load failed", str(e))
                     return
@@ -440,14 +508,13 @@ class AuthenticationWindow(QWidget):
 
     def switch_to_background_mode(self):
         """
-        Minimizes the main window and opens a small floating window
+        Minimizes the main window and opens a styled floating window
         in the bottom-right corner showing live authentication status.
         """
         try:
-            # Create floating window
             self.bg_window = QWidget()
-            self.bg_window.setWindowTitle("Auth Status")
-            self.bg_window.setFixedSize(260, 140)
+            self.bg_window.setObjectName("bg-card")
+            self.bg_window.setFixedSize(280, 180)
             self.bg_window.setWindowFlags(
                 Qt.WindowStaysOnTopHint |
                 Qt.FramelessWindowHint |
@@ -455,28 +522,54 @@ class AuthenticationWindow(QWidget):
             )
 
             layout = QVBoxLayout(self.bg_window)
+            layout.setContentsMargins(16, 16, 16, 16)
+            layout.setSpacing(10)
 
-            label = QLabel("Authentication Running...")
-            label.setAlignment(Qt.AlignCenter)
+            # ── Title ───────────────────────────────
+            title = QLabel("Background Service")
+            title.setProperty("class", "bg-title")
+            layout.addWidget(title)
 
-            self.bg_status_label = QLabel("Extracting features...")
-            self.bg_status_label.setAlignment(Qt.AlignCenter)
+            # ── Status row ──────────────────────────
+            row = QHBoxLayout()
+            status = QLabel("Status")
+            status.setStyleSheet("background: transparent;")
 
-            layout.addWidget(label)
-            layout.addWidget(self.bg_status_label)
+            self.bg_status_label = QLabel("● Idle")
+            self.bg_status_label.setProperty("class", "status-pill idle")
+            self.bg_status_label.setStyleSheet("background: transparent;")
 
-            # Move to bottom-right of screen
+            row.addWidget(status)
+            row.addStretch()
+            row.addWidget(self.bg_status_label)
+
+            layout.addLayout(row)
+
+            # ── Divider ──────────────────────────────
+            sep = QFrame()
+            sep.setFrameShape(QFrame.HLine)
+            sep.setFrameShadow(QFrame.Sunken)
+            sep.setProperty("class", "separator")
+            layout.addWidget(sep)
+
+            # ── Logout button ────────────────────────
+            logout_btn = QPushButton("Logout")
+            logout_btn.setProperty("class", "danger")
+            logout_btn.clicked.connect(self.close_background_mode)
+            layout.addWidget(logout_btn)
+
+            # Position bottom-right
             screen = QApplication.primaryScreen().availableGeometry()
-            x = screen.width() - self.bg_window.width() - 20
-            y = screen.height() - self.bg_window.height() - 20
+            x = screen.right() - self.bg_window.width() - 20
+            y = screen.bottom() - self.bg_window.height() - 20
             self.bg_window.move(x, y)
 
             self.bg_window.show()
-            self.hide()  # hide main window
+            self.hide()
 
             self.bg_manager = BackgroundAuthManager(
                 username=self.username,
-                authenticator_model_path=MODEL_PATH,
+                authenticator_model_path=PATH_MODELS,
                 interval=10
             )
             self.bg_manager.status_update.connect(self.bg_status_label.setText)
@@ -484,6 +577,11 @@ class AuthenticationWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Background Mode Error", str(e))
+
+    def close_background_mode(self):
+        self.bg_manager.stop()
+        self.bg_window.close()
+        self.show()
 
     # =================================================================
     #  UI UTILITY FUNCTIONS

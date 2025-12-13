@@ -300,7 +300,8 @@ class FeatureExtractor:
         self.key_features.clear()
         self.mouse_features.clear()
 
-    def clear_for_next_rep(self, fault=False):
+    def clear_for_next_rep(self, failed=False):
         self.key_features.clear()
         self.mouse_features.clear()
-        self.rep_counter += 1
+        if not failed:
+            self.rep_counter += 1

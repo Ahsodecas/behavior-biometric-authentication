@@ -35,7 +35,7 @@ class BackgroundAuthManager(QObject):
         self._stop_event = Event()
 
     def start(self):
-        self.status_update.emit("Background auth started.")
+        #self.status_update.emit("Background auth started.")
         self.data_utility.start_background_collection()
         self.timer.start(self.interval * 1000)
 
