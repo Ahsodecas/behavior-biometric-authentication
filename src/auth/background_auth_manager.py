@@ -1,57 +1,71 @@
 # src/utils/background_auth_manager.py
 
-import os
-import csv
 import time
-from threading import Thread, Event
+from threading import Event
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 
 from src.utils.data_utility import DataUtility
-from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 
 
 class BackgroundAuthManager(QObject):
     """
-    Handles continuous background authentication:
-    - Collects mouse/keyboard data periodically
-    - Saves raw/features
-    - Requests authentication
-    - Updates UI via signal
+    Dummy background authentication manager.
+    Cycles through authentication states on a timer and updates UI.
     """
 
-    status_update = pyqtSignal(str)  # Signal to update the floating window
+    status_update = pyqtSignal(str)
 
-    def __init__(self, username, authenticator_model_path, interval=300):
+    STATUSES = [
+        ("● Idle", "idle"),
+        ("● Collecting data", "collecting"),
+        ("● Feature extraction", "features"),
+        ("● Authentication", "auth"),
+    ]
+
+    def __init__(self, username, authenticator_model_path=None, interval=2):
         super().__init__()
+
         self.username = username
-        self.interval = interval  # seconds
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.run_cycle)
-
-        # Core utilities
-        self.data_utility = DataUtility(username=username)
-
-        # Thread control
+        self.interval = interval  # seconds between state changes
         self._stop_event = Event()
 
+        self.data_utility = DataUtility(username=username)
+
+        self._state_index = 0
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._advance_state)
+
     def start(self):
-        #self.status_update.emit("Background auth started.")
+        """Start dummy background authentication."""
+        self._state_index = 0
+        self.status_update.emit(self.STATUSES[0][0])
+
         self.data_utility.start_background_collection()
         self.timer.start(self.interval * 1000)
 
     def stop(self):
+        """Stop background authentication."""
         self.timer.stop()
         self._stop_event.set()
         self.data_utility.stop_background_collection()
-        self.status_update.emit("Background auth stopped.")
+        self.status_update.emit("● Idle")
 
-    def run_cycle(self):
+    def _advance_state(self):
         """
-        Collect features, save data, authenticate user, update status label.
+        Dummy logic that cycles through auth states.
         """
-        try:
-            self.data_utility.mouse_data_collector.save_to_csv(filename="mouse.csv")
-            self.data_utility.reset()
+        if self._stop_event.is_set():
+            return
 
-        except Exception as e:
-            self.status_update.emit(f"Error: {str(e)}")
+        self._state_index = (self._state_index + 1) % len(self.STATUSES)
+        label, state = self.STATUSES[self._state_index]
+
+        self.status_update.emit(label)
+
+        if state == "collecting":
+            pass  # simulate data collection
+        elif state == "features":
+            pass  # simulate feature extraction
+        elif state == "auth":
+            pass  # simulate authentication
