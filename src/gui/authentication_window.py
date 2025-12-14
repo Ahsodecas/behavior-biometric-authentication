@@ -184,7 +184,6 @@ class AuthenticationWindow(QWidget):
                 f"{self.enroll_count}_{self.enroll_filename}"
             )
             self.data_utility.set_username(username=self.username)
-            self.data_utility.generate_synthetic_features(filename, repetitions=10)
 
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")

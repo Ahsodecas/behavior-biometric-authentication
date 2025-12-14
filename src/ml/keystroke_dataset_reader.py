@@ -5,7 +5,6 @@ class KeystrokeDatasetReader:
     def __init__(self):
         self.features = []
         self.dataset_dir = "/datasets/DATASET"
-        self.filename = "DSL-StrongPasswordData.csv"
 
     VK_TO_TOKEN = {
         **{vk: chr(vk) for vk in range(65, 91)},  # A–Z
@@ -35,10 +34,6 @@ class KeystrokeDatasetReader:
         except ValueError:
             return "UNK"
 
-    def generate_features_file(self):
-        hold_features, flight_features, ud_features = self.read_human_hold_flight_features()
-        return hold_features, flight_features, ud_features
-
     # def create_key_sequence(self, password: str):
     #     key_sequence = []
     #
@@ -47,7 +42,7 @@ class KeystrokeDatasetReader:
     #
     #     return key_sequence
 
-    def read_human_hold_flight_features(self):
+    def load_key_dataset(self) -> tuple[list[tuple[str, float]], list[tuple[str, float]], list[tuple[str, float]]]:
         hold_features = []
         dd_features = []
         ud_features = []

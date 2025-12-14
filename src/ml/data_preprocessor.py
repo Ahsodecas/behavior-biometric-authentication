@@ -94,10 +94,19 @@ class DataPreprocessor:
                 synth_df = pd.DataFrame()
 
             print("[DataProcessor] Loading DSL baseline dataset...")
-            dsl_df = self.load_csv(self.dsl_dataset_csv)
+            self.data_utility.generate_synthetic_features_imposter_users(
+                filename="generated_imposter_data.csv", repetitions=self.synth_reps)
+            dsl_df = self.load_csv("C:\\Users\\anast\\src\\repos\\behavior-biometric-authentication\\extracted_features\\ahsodecas\\generated_imposter_data.csv")
             if dsl_df is None:
                 print("[FATAL] DSL dataset missing. Cannot build training CSV.")
                 return None
+            #
+            # imposter_users_data_file = "C:\\Users\\anast\\src\\repos\\behavior-biometric-authentication\\extracted_features\\ahsodecas\\generated_imposter_data.csv"
+            # imposter_data = self.data_utility.generate_synthetic_features_imposter_users(filename="generated_imposter_data.csv", repetitions=self.synth_reps)
+            # dsl_df = pd.DataFrame(
+            #     [(feature, value) for sublist in imposter_data for (feature, value) in sublist],
+            #     columns=["feature", "value"]
+            # )
 
             print("[DataProcessor] Combining datasets...")
             try:

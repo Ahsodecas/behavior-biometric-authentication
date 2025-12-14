@@ -264,11 +264,11 @@ class SyntheticFeaturesGenerator:
         return ""
 
 
-    def generate(self, hold_features: list[tuple[str, float]] = None, dd_flight_features: list[tuple[str, float]] = None, ud_flight_features: list[tuple[str, float]] = None, repetitions: int = 1) -> list[list[tuple[str, float]]]:
+    def generate(self, hold_features: list[tuple[str, float]] = None, dd_features: list[tuple[str, float]] = None, ud_features: list[tuple[str, float]] = None, repetitions: int = 1) -> list[list[tuple[str, float]]]:
         # self.build_context_sets()
 
-        if hold_features is None or dd_flight_features is None or ud_flight_features is None:
-            hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
+        if hold_features is None or dd_features is None or ud_features is None:
+            hold_features, dd_features, ud_features = self.split_genuine_features()
 
         # print("FEATURE SPLIT SUCCESSFULLY")
 
@@ -280,11 +280,11 @@ class SyntheticFeaturesGenerator:
                                                             M=self.context_order, channel=self.channels["hold"])
 
         # print("HOLD CONTEXT SETS CREATED SUCCESSFULLY")
-        decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=key_sequence,
+        decisions_dd = self.select_contexts_for_sequence(dd_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["DD"])
         # print("DD CONTEXT SETS CREATED SUCCESSFULLY")
 
-        decisions_ud = self.select_contexts_for_sequence(ud_flight_features, K_sequence=key_sequence,
+        decisions_ud = self.select_contexts_for_sequence(ud_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["UD"])
 
         # print("UD CONTEXT SETS CREATED SUCCESSFULLY")
