@@ -603,12 +603,14 @@ class AuthenticationWindow(QWidget):
                 self.bg_manager.deleteLater()
                 self.bg_manager = None
 
+            if hasattr(self, "bg_result_label"):
+                self.bg_result_label.setText("— Waiting")
+
             if hasattr(self, "bg_window") and self.bg_window:
                 self.bg_window.close()
                 self.bg_window = None
 
-            if hasattr(self, "bg_result_label"):
-                self.bg_result_label.setText("— Waiting")
+
 
             self.setup_authentication_mode()
             self.show()

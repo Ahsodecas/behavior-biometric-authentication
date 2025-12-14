@@ -64,31 +64,39 @@ class BackgroundAuthManager(QObject):
     # Collection + Authentication
     # =========================
     def _collect_data_for_duration(self, duration_minutes=3):
-        print("Start collecting data...")
+        if self._stop_event.is_set():
+            return
+
         self.data_utility.start_background_collection()
 
         start_time = time.time()
         duration_seconds = duration_minutes * 60
 
         while (
-            not self._stop_event.is_set()
-            and (time.time() - start_time) < duration_seconds
+                not self._stop_event.is_set()
+                and (time.time() - start_time) < duration_seconds
         ):
             time.sleep(1)
 
+        if self._stop_event.is_set():
+            return
+
         self.data_utility.stop_background_collection()
-        print("Stopped collecting data...")
         self.data_utility.save_mouse_raw_csv(filename="mouse_raw.csv")
 
         df = self.data_utility.mouse_data_collector.get_data()
 
+        if self._stop_event.is_set():
+            return
+
         self.status_update.emit("● Authenticating")
-        print("Authenticating...")
+
         accepted, mean_score = self._authenticate(df)
-        print(f"Authenticated: {accepted}, mean_score: {mean_score}")
+
+        if self._stop_event.is_set():
+            return
 
         self.auth_result.emit(bool(accepted), float(mean_score))
-
 
     # =========================
     # Authentication Logic
