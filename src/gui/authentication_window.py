@@ -15,9 +15,8 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
     QHBoxLayout, QFrame
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
 
-from sklearn.preprocessing import StandardScaler
 
 from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
@@ -805,6 +804,7 @@ class AuthenticationWindow(QWidget):
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
         self.skip_enroll_button.clicked.connect(self.load_csv_data)
+        self.skip_enroll_button.setProperty("class", "primary")
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()
