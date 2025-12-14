@@ -240,13 +240,9 @@ class SyntheticFeaturesGenerator:
     def generate_features_from_decisions(self, decisions, K_sequence, channel, generating_function="icdf"):
         generate_values = []
         for d in decisions:
-            if d["use_random_fallback"]:
-                feature_name = self.construct_feature_name(K_sequence, channel, d["index"])
-                generate_values.append((feature_name, random.uniform(0, 1)))
-                continue
             feature_name = self.construct_feature_name(K_sequence=K_sequence, channel=channel, key_idx=d["index"])
             if d["use_random_fallback"]:
-                generate_values.append((feature_name, random.uniform(0, 1)))
+                generate_values.append((feature_name, random.uniform(0, 0.3)))
             elif generating_function == "mean":
                 generate_values.append((feature_name, self.f_generating_func_mean(d["Si"])))
             elif generating_function == "icdf":

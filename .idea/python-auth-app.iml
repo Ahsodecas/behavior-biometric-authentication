@@ -4,6 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv1" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.14 virtualenv at C:\Users\anast\src\repos\behavior-biometric-authentication\.venv" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

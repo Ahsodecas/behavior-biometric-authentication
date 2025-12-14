@@ -4,6 +4,8 @@
 
 import os
 import csv
+from datetime import time
+
 import torch
 import numpy as np
 
@@ -19,17 +21,25 @@ from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
 from src.auth.security_controller import SecurityController
-from src.snn.training_worker import TrainingWorker
+from src.ml.data_preprocessor import DataPreprocessor
+from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
-from src.auth.authenticator import Authenticator
+from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
+from src.ml.model_trainer import ModelTrainer
 
 
 # =====================================================================
 #  CONSTANTS & GLOBAL CONFIG
 # =====================================================================
 
-MODEL_PATH = "models/snn_final.pt"
 
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(ROOT_DIR))
+PATH_MODELS = os.path.join(PROJECT_ROOT, "models")
+PATH_DATASETS = os.path.join(PROJECT_ROOT, "datasets")
+PATH_EXTRACTED = os.path.join(PROJECT_ROOT, "extracted_features")
+
+MODEL_PATH = os.path.join(PATH_MODELS, "snn_final.pt")
 
 # =====================================================================
 #  MAIN AUTHENTICATION WINDOW CLASS
@@ -52,11 +62,12 @@ class AuthenticationWindow(QWidget):
             self.enroll_filename = "enrollment_features.csv"
             self.enroll_append = True
             self.password_fixed = ".tie5Roanl"
+            self.username = ""
 
             # Core helpers
             self.data_utility = DataUtility()
-            self.security_controller = SecurityController(threshold=0.2)
-            self.authenticator = Authenticator(threshold=0.2)
+            self.security_controller = SecurityController(threshold=0.3)
+            self.authenticator = AuthenticationDecisionMaker(threshold=0.3)
 
             # UI setup
             self.setup_layout()
@@ -101,6 +112,7 @@ class AuthenticationWindow(QWidget):
     def submit_enrollment_sample(self):
         try:
             username = self.username_entry.text()
+            self.username = username
             password = self.password_entry.text()
 
             # Validation
@@ -118,11 +130,8 @@ class AuthenticationWindow(QWidget):
 
             # Feature extraction
             self.data_utility.extract_features(username)
-            filename = (
-                self.enroll_filename
-                if self.enroll_append else
-                f"{self.enroll_count}_{self.enroll_filename}"
-            )
+            filename = "enrollment_features.csv"
+
 
             self.data_utility.save_features_csv(
                 filename=filename,
@@ -147,6 +156,7 @@ class AuthenticationWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
+
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
         if not file_path:
@@ -161,33 +171,11 @@ class AuthenticationWindow(QWidget):
         username = ""
 
         try:
-            with open(file_path, newline='') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    for key, value in row.items():
-                        if key == "subject":
-                            metadata[key] = value
-                            username = value
-                        elif value is not None and key == "sessionIndex" or key == "rep":
-                            try:
-                                value = int(value)
-                            except ValueError:
-                                pass
-                            metadata[key] = value
-                        elif key is not None and value is not None and value != '':
-                            try:
-                                # print(key +"  " + value)
-                                value = float(value)
-                            except ValueError:
-                                pass
-                            features[key] = value
-                    self.data_utility.feature_extractor.key_features.update(metadata, features)
-
+            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
-            # DEBUG temporary messages
-            print("Features read: ")
-            print(self.data_utility.feature_extractor.key_features.all_features)
+            #print("Features read: ")
+            #print(self.data_utility.feature_extractor.key_features.all_features)
             filename = (
                 self.enroll_filename
                 if self.enroll_append else
@@ -252,20 +240,30 @@ class AuthenticationWindow(QWidget):
     def start_model_training(self):
         """Triggered when user presses 'Start Training'."""
         try:
-            self.training_status.setText("Model is training... please wait.")
+
+            self.training_status.setText("Data is processing.... Please wait.")
             self.train_button.setEnabled(False)
 
-            from src.snn.model_trainer import ModelTrainer
+            username = self.username
+
+            preprocessor = DataPreprocessor(
+                enrollment_csv=os.path.join(PATH_EXTRACTED, username, "enrollment_features.csv"),
+                dsl_dataset_csv=os.path.join(PATH_DATASETS, "DSL-StrongPasswordData.csv"),
+                username=username,
+                output_csv=os.path.join(PATH_DATASETS, f"{username}_training.csv")
+            )
 
             trainer = ModelTrainer(
-                csv_path="datasets/ksenia_training_2.csv",
-                out_dir="models",
+                csv_path=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
+                out_dir=PATH_MODELS,
                 batch_size=64,
                 lr=1e-3
             )
 
-            self.worker = TrainingWorker(trainer)
-            self.worker.finished.connect(self.on_training_finished)
+            print(f"1")
+            self.worker = TrainingWorker(trainer, preprocessor, username)
+            self.worker.dataProcFinished.connect(self.on_data_processing_finished)
+            self.worker.trainFinished.connect(self.on_training_finished)
             self.worker.start()
 
         except Exception as e:
@@ -273,8 +271,12 @@ class AuthenticationWindow(QWidget):
 
     def on_training_finished(self):
         self.training_status.setText("Training finished.")
-        self.train_button.setEnabled(True)
+        self.train_button.setEnabled(False)
         QMessageBox.information(self, "Training", "Model training finished successfully.")
+
+    def on_data_processing_finished(self):
+        self.training_status.setText("Data Processing finished. Training... Please wait.")
+        self.train_button.setEnabled(False)
     # =================================================================
     #  AUTHENTICATION MODE
     # =================================================================
@@ -366,9 +368,11 @@ class AuthenticationWindow(QWidget):
                 self.data_utility.username = username
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
+                self.data_utility.save_raw_csv(filename="raw.csv")
                 self.data_utility.save_features_csv(filename="temp_features.csv")
             except Exception as e:
                 QMessageBox.critical(self, "Feature Error", str(e))
+                self.data_utility.reset()
                 self.password_entry.clear()
                 return
 
@@ -376,21 +380,28 @@ class AuthenticationWindow(QWidget):
                 success, dist, message = self.authenticator.authenticate(username, password, features)
             except Exception as e:
                 QMessageBox.critical(self, "Model Error", str(e))
+                self.data_utility.reset()
                 self.password_entry.clear()
                 return
 
             if success:
-                QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
-                try: self.switch_to_background_mode()
-                except Exception as e:
-                    QMessageBox.critical(self, "Background Mode Error", str(e))
-                    self.password_entry.clear()
+                QMessageBox.information(self, "Authentication", f"{message}\n")#Distance = {dist:.4f}")
+                #try: self.switch_to_background_mode()
+                #except Exception as e:
+                #    QMessageBox.critical(self, "Background Mode Error", str(e))
+
+                self.data_utility.reset()
+                self.password_entry.clear()
             else:
-                QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                QMessageBox.critical(self, "Authentication", f"{message}\n")#Distance = {dist:.4f}")
+
+                self.data_utility.reset()
                 self.password_entry.clear()
 
         except Exception as e:
             QMessageBox.critical(self, "Authentication Error", str(e))
+
+            self.data_utility.reset()
             self.password_entry.clear()
 
 
@@ -576,7 +587,10 @@ class AuthenticationWindow(QWidget):
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
         self.skip_enroll_button.clicked.connect(self.load_csv_data)
+<<<<<<< HEAD
         self.skip_enroll_button.setProperty("class", "primary")
+=======
+>>>>>>> main
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()

@@ -47,7 +47,7 @@ class CMUDatasetTriplet(Dataset):
     """Load CMU-style CSV and produce triplets.
 
     Assumptions about CSV:
-      - It contains columns: subject, sessionIndex, rep, <feature columns...>
+      - It contains columns: subject, sessionInd, rep, <feature columns...>
       - Feature columns are numeric. All columns after `rep` are considered features.
       - If features already encode time-series (e.g., flattened timesteps), the dataset will treat each row
         as a sequence of length 1 with feature-dim = n_features. This keeps the LSTM pipeline working.
@@ -324,7 +324,7 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument('--mode', type=str, required=True, help='Mode: test or train')
     p.add_argument('--csv', type=str, required=True, help='Path to CMU-style CSV file (rows are samples)')
-    p.add_argument('--out_dir', type=str, default='datasets/checkpoints', help='Where to save model checkpoints')
+    p.add_argument('--out_dir', type=str, default='checkpoints', help='Where to save model checkpoints')
     p.add_argument('--epochs', type=int, default=10)
     p.add_argument('--batch_size', type=int, default=64)
     p.add_argument('--lr', type=float, default=1e-3)
