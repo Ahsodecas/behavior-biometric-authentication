@@ -28,7 +28,7 @@ class BackgroundAuthManager(QObject):
     # =========================
     WINDOW_SIZE = 128
     STEP_SIZE = 64
-    DECISION_THRESHOLD = 0.5
+    DECISION_THRESHOLD = 0.7
 
     def __init__(self, username, data_utility, authenticator_model_path):
         super().__init__()
@@ -40,17 +40,12 @@ class BackgroundAuthManager(QObject):
         self._stop_event = Event()
         self._thread = None
 
-        # Load model once
         self.model = tf.keras.models.load_model(self.authenticator_model_path)
 
     # =========================
     # Public API
     # =========================
     def start(self):
-        """Start collecting data in the background."""
-        if self._thread and self._thread.is_alive():
-            return
-
         self._stop_event.clear()
         self.status_update.emit("● Collecting data")
 
@@ -61,19 +56,15 @@ class BackgroundAuthManager(QObject):
         self._thread.start()
 
     def stop(self):
-        """Stop collection immediately."""
-
-        self.data_utility.stop_background_collection()
         self._stop_event.set()
-        if self._thread:
-            self._thread.join()
-
+        self.data_utility.stop_background_collection()
         self.status_update.emit("● Idle")
 
     # =========================
     # Collection + Authentication
     # =========================
     def _collect_data_for_duration(self, duration_minutes=3):
+        print("Start collecting data...")
         self.data_utility.start_background_collection()
 
         start_time = time.time()
@@ -86,16 +77,17 @@ class BackgroundAuthManager(QObject):
             time.sleep(1)
 
         self.data_utility.stop_background_collection()
-
+        print("Stopped collecting data...")
         self.data_utility.save_mouse_raw_csv(filename="mouse_raw.csv")
 
         df = self.data_utility.mouse_data_collector.get_data()
 
         self.status_update.emit("● Authenticating")
+        print("Authenticating...")
         accepted, mean_score = self._authenticate(df)
+        print(f"Authenticated: {accepted}, mean_score: {mean_score}")
 
         self.auth_result.emit(bool(accepted), float(mean_score))
-        self.status_update.emit("● Idle")
 
 
     # =========================

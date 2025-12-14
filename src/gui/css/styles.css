@@ -198,3 +198,24 @@ QPushButton.danger:hover {
     background: rgba(229,83,61,0.08);
     border-radius: 8px;
 }
+
+QLabel.result-pill {
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+QLabel.result-pill.neutral {
+    background: #e0e0e0;
+    color: #555;
+}
+
+QLabel.result-pill.success {
+    background: #c8f7c5;
+    color: #1b5e20;
+}
+
+QLabel.result-pill.danger {
+    background: #f8d7da;
+    color: #721c24;
+}

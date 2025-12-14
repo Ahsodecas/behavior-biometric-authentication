@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
     QHBoxLayout, QFrame
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
 
 from sklearn.preprocessing import StandardScaler
 
@@ -502,11 +502,10 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Mode Change Error", str(e))
 
-        # Add this method inside the AuthenticationWindow class
 
     def switch_to_background_mode(self):
+        # ---- UI setup errors ----
         try:
-            # Close previous bg_window if exists
             if hasattr(self, "bg_window") and self.bg_window:
                 self.close_background_mode()
 
@@ -523,72 +522,93 @@ class AuthenticationWindow(QWidget):
             layout.setContentsMargins(16, 16, 16, 16)
             layout.setSpacing(10)
 
-            # Title
             title = QLabel("Background Service")
             title.setProperty("class", "bg-title")
             layout.addWidget(title)
 
-            # Status row
             row = QHBoxLayout()
             status = QLabel("Status")
-            status.setStyleSheet("background: transparent;")
-            self.bg_status_label = QLabel("● Idle")
-            self.bg_status_label.setProperty("class", "status-pill idle")
-            self.bg_status_label.setStyleSheet("background: transparent;")
+            status.setProperty("class", "status")
             row.addWidget(status)
             row.addStretch()
+
+            self.bg_status_label = QLabel("● Idle")
+            self.bg_status_label.setProperty("class", "status-pill idle")
             row.addWidget(self.bg_status_label)
             layout.addLayout(row)
 
-            # Divider
-            sep = QFrame()
-            sep.setFrameShape(QFrame.HLine)
-            sep.setFrameShadow(QFrame.Sunken)
-            sep.setProperty("class", "separator")
-            layout.addWidget(sep)
+            result_row = QHBoxLayout()
 
-            # Logout button
+            result_label = QLabel("Last auth")
+            result_label.setProperty("class", "status")
+            result_row.addWidget(result_label)
+            result_row.addStretch()
+
+            self.bg_result_label = QLabel("— Waiting")
+            self.bg_result_label.setProperty("class", "result-pill neutral")
+            result_row.addWidget(self.bg_result_label)
+
+            layout.addLayout(result_row)
+
             logout_btn = QPushButton("Logout")
             logout_btn.setProperty("class", "danger")
             logout_btn.clicked.connect(self.close_background_mode)
             layout.addWidget(logout_btn)
 
-            # Position bottom-right
             screen = QApplication.primaryScreen().availableGeometry()
-            x = screen.right() - self.bg_window.width() - 20
-            y = screen.bottom() - self.bg_window.height() - 20
-            self.bg_window.move(x, y)
+            self.bg_window.move(
+                screen.right() - self.bg_window.width() - 20,
+                screen.bottom() - self.bg_window.height() - 20
+            )
 
             self.bg_window.show()
             self.hide()
 
-            # Start background auth manager safely
+        except Exception as e:
+            QMessageBox.critical(self, "UI Error", f"Failed to start background UI:\n{e}")
+            return
+
+        try:
             if hasattr(self, "bg_manager") and self.bg_manager:
-                self.bg_manager.stop()  # Stop previous if any
+                self.bg_manager.stop()
 
             self.bg_manager = BackgroundAuthManager(
                 username=self.username,
                 data_utility=self.data_utility,
-                authenticator_model_path=os.path.join(PATH_MODELS, f"{self.username}_cnn_mouse.keras"),
+                authenticator_model_path=os.path.join(
+                    PATH_MODELS, f"{self.username}_cnn_mouse.keras"
+                ),
             )
+
             self.bg_manager.status_update.connect(self.bg_status_label.setText)
             self.bg_manager.auth_result.connect(self.on_auth_result)
             self.bg_manager.start()
 
         except Exception as e:
-            QMessageBox.critical(self, "Background Mode Error", str(e))
+            QMessageBox.critical(
+                self,
+                "Background Auth Error",
+                f"Failed to start background authentication:\n{e}"
+            )
+            self.close_background_mode()
 
     def close_background_mode(self):
-        print("Closing background mode...")
         try:
             if hasattr(self, "bg_manager") and self.bg_manager:
-                self.bg_manager.stop()
+                try:
+                    self.bg_manager.stop()
+                except Exception:
+                    pass
+
                 self.bg_manager.deleteLater()
                 self.bg_manager = None
 
             if hasattr(self, "bg_window") and self.bg_window:
                 self.bg_window.close()
                 self.bg_window = None
+
+            if hasattr(self, "bg_result_label"):
+                self.bg_result_label.setText("— Waiting")
 
             self.setup_authentication_mode()
             self.show()
@@ -597,20 +617,40 @@ class AuthenticationWindow(QWidget):
             QMessageBox.critical(self, "Logout Error", str(e))
 
     def on_auth_result(self, accepted: bool, mean_score: float):
-        if accepted:
-            self.bg_status_label.setText("● Authenticated")
-            self.data_utility.clear_mouse_data()
-            self.bg_manager.start()
+        try:
+            if not self.bg_manager:
+                return
 
-        else:
-            self.bg_manager.stop()
-            QMessageBox.warning(
-                self,
-                "Authentication Failed",
-                "Behavioral authentication failed. Please authenticate again."
-            )
-            self.bg_window.close()
-            self.setup_authentication_mode()
+            if accepted:
+                self.bg_status_label.setText("● Authenticated")
+
+                self.bg_result_label.setText(f"✓ Accepted ({mean_score:.2f})")
+                self.bg_result_label.setProperty("class", "result-pill success")
+                self.bg_result_label.style().unpolish(self.bg_result_label)
+                self.bg_result_label.style().polish(self.bg_result_label)
+
+                self.data_utility.clear_mouse_data()
+                print(f"Authentication Successful. Score: {mean_score}")
+
+                QTimer.singleShot(1000, self.bg_manager.start)
+
+            else:
+                self.bg_result_label.setText(f"✗ Rejected ({mean_score:.2f})")
+                self.bg_result_label.setProperty("class", "result-pill danger")
+                self.bg_result_label.style().unpolish(self.bg_result_label)
+                self.bg_result_label.style().polish(self.bg_result_label)
+
+                self.bg_manager.stop()
+                QMessageBox.warning(
+                    self,
+                    "Authentication Failed",
+                    "Behavioral authentication failed. Please authenticate again."
+                )
+                self.close_background_mode()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Background Auth Error", str(e))
+            self.close_background_mode()
 
     # =================================================================
     #  UI UTILITY FUNCTIONS

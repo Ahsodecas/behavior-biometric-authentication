@@ -69,6 +69,7 @@ class MouseDataCollector:
             writer.writerow(['timestamp', 'button', 'state', 'x', 'y'])
             for event in self.events:
                 writer.writerow(event)
+        print(f"Saved Mouse Data to {filename}")
 
     def get_data(self):
         return pd.DataFrame(
