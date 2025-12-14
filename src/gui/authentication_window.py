@@ -17,7 +17,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
 
-from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
 from src.ml.data_preprocessor import DataPreprocessor
@@ -280,9 +279,6 @@ class AuthenticationWindow(QWidget):
         top_row.addStretch()
         card_layout.addLayout(top_row)
 
-
-        card_layout.addLayout(top_row)
-
         # Status label
         self.training_status = QLabel("Press the button below to start training.")
         self.training_status.setAlignment(Qt.AlignCenter)
@@ -349,6 +345,7 @@ class AuthenticationWindow(QWidget):
     #  AUTHENTICATION MODE
     # =================================================================
     def setup_authentication_mode(self):
+        print("Setting up authentication mode...")
         self.clear_layout()
         self.resize(760, 480)
         self.center_on_screen()
@@ -435,6 +432,7 @@ class AuthenticationWindow(QWidget):
             try:
                 self.username = username
                 self.data_utility.username = username
+                self.data_utility.mouse_data_collector.username = username
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_raw_csv(filename="raw.csv")
@@ -507,11 +505,11 @@ class AuthenticationWindow(QWidget):
         # Add this method inside the AuthenticationWindow class
 
     def switch_to_background_mode(self):
-        """
-        Minimizes the main window and opens a styled floating window
-        in the bottom-right corner showing live authentication status.
-        """
         try:
+            # Close previous bg_window if exists
+            if hasattr(self, "bg_window") and self.bg_window:
+                self.close_background_mode()
+
             self.bg_window = QWidget()
             self.bg_window.setObjectName("bg-card")
             self.bg_window.setFixedSize(280, 180)
@@ -525,34 +523,31 @@ class AuthenticationWindow(QWidget):
             layout.setContentsMargins(16, 16, 16, 16)
             layout.setSpacing(10)
 
-            # ── Title ───────────────────────────────
+            # Title
             title = QLabel("Background Service")
             title.setProperty("class", "bg-title")
             layout.addWidget(title)
 
-            # ── Status row ──────────────────────────
+            # Status row
             row = QHBoxLayout()
             status = QLabel("Status")
             status.setStyleSheet("background: transparent;")
-
             self.bg_status_label = QLabel("● Idle")
             self.bg_status_label.setProperty("class", "status-pill idle")
             self.bg_status_label.setStyleSheet("background: transparent;")
-
             row.addWidget(status)
             row.addStretch()
             row.addWidget(self.bg_status_label)
-
             layout.addLayout(row)
 
-            # ── Divider ──────────────────────────────
+            # Divider
             sep = QFrame()
             sep.setFrameShape(QFrame.HLine)
             sep.setFrameShadow(QFrame.Sunken)
             sep.setProperty("class", "separator")
             layout.addWidget(sep)
 
-            # ── Logout button ────────────────────────
+            # Logout button
             logout_btn = QPushButton("Logout")
             logout_btn.setProperty("class", "danger")
             logout_btn.clicked.connect(self.close_background_mode)
@@ -567,21 +562,55 @@ class AuthenticationWindow(QWidget):
             self.bg_window.show()
             self.hide()
 
+            # Start background auth manager safely
+            if hasattr(self, "bg_manager") and self.bg_manager:
+                self.bg_manager.stop()  # Stop previous if any
+
             self.bg_manager = BackgroundAuthManager(
                 username=self.username,
-                authenticator_model_path=PATH_MODELS,
-                interval=10
+                data_utility=self.data_utility,
+                authenticator_model_path=os.path.join(PATH_MODELS, f"{self.username}_cnn_mouse.keras"),
             )
             self.bg_manager.status_update.connect(self.bg_status_label.setText)
+            self.bg_manager.auth_result.connect(self.on_auth_result)
             self.bg_manager.start()
 
         except Exception as e:
             QMessageBox.critical(self, "Background Mode Error", str(e))
 
     def close_background_mode(self):
-        self.bg_manager.stop()
-        self.bg_window.close()
-        self.show()
+        print("Closing background mode...")
+        try:
+            if hasattr(self, "bg_manager") and self.bg_manager:
+                self.bg_manager.stop()
+                self.bg_manager.deleteLater()
+                self.bg_manager = None
+
+            if hasattr(self, "bg_window") and self.bg_window:
+                self.bg_window.close()
+                self.bg_window = None
+
+            self.setup_authentication_mode()
+            self.show()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Logout Error", str(e))
+
+    def on_auth_result(self, accepted: bool, mean_score: float):
+        if accepted:
+            self.bg_status_label.setText("● Authenticated")
+            self.data_utility.clear_mouse_data()
+            self.bg_manager.start()
+
+        else:
+            self.bg_manager.stop()
+            QMessageBox.warning(
+                self,
+                "Authentication Failed",
+                "Behavioral authentication failed. Please authenticate again."
+            )
+            self.bg_window.close()
+            self.setup_authentication_mode()
 
     # =================================================================
     #  UI UTILITY FUNCTIONS

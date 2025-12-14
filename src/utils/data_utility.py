@@ -66,3 +66,6 @@ class DataUtility:
     def reset(self, failed=False):
         self.data_collector.clear_for_next_rep(failed=failed)
         self.feature_extractor.clear_for_next_rep(failed=failed)
+
+    def clear_mouse_data(self):
+        self.mouse_data_collector.clear()

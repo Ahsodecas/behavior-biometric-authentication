@@ -47,9 +47,6 @@ class AuthenticationDecisionMaker:
 
         tmp_dataset = CMUDatasetTriplet(training_csv)
         input_dim = tmp_dataset.X.shape[1]
-        print(f"X: {tmp_dataset.X.shape}")
-        print(f"Input dimension: {input_dim}")
-        print(f"feature_cols: {tmp_dataset.feature_cols}")
 
         self.scaler = tmp_dataset.scaler
         self.feature_cols = tmp_dataset.feature_cols
