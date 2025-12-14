@@ -3,11 +3,6 @@
 # =====================================================================
 
 import os
-import csv
-from datetime import time
-
-import torch
-import numpy as np
 
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
@@ -15,17 +10,12 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
     QHBoxLayout, QFrame
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
-from numpy.f2py.crackfortran import usermodules
-
-from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
-from sklearn.preprocessing import StandardScaler
+from PyQt5.QtCore import Qt, QEvent
 
 from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
-from src.auth.background_auth_manager import BackgroundAuthManager
 from src.ml.model_trainer import ModelTrainer
 
 
@@ -33,7 +23,7 @@ from src.ml.model_trainer import ModelTrainer
 #  CONSTANTS & GLOBAL CONFIG
 # =====================================================================
 
-import src.gui.constants as constants
+import src.constants as constants
 
 # =====================================================================
 #  MAIN AUTHENTICATION WINDOW CLASS

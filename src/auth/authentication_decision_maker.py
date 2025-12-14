@@ -7,7 +7,7 @@ from src.ml.snn_model import TripletSNN
 from src.ml.triplet_dataset import CMUDatasetTriplet
 import pandas as pd
 
-import src.gui.constants as constants
+import src.constants as constants
 
 class AuthenticationDecisionMaker:
     """
@@ -16,8 +16,8 @@ class AuthenticationDecisionMaker:
     The GUI should only call authenticator.authenticate().
     """
 
-    def __init__(self, password_fixed=".tie5Roanl", threshold=0.4):
-        self.password_fixed = password_fixed
+    def __init__(self, threshold=0.4):
+        self.password_fixed = constants.PASSWORD
         self.threshold = threshold
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
