@@ -40,9 +40,9 @@ class DataPreprocessor:
             return None
 
     # -------------------------------------------------------
-    # Generate synthetic using your existing pipeline
+    # Generate synthetic using existing pipeline
     # -------------------------------------------------------
-    def generate_synthetic(self, enrollment_csv, username):
+    def generate_synthetic(self, enrollment_csv):
         try:
             df = self.load_csv(enrollment_csv)
             if df is None or df.empty:
@@ -56,12 +56,11 @@ class DataPreprocessor:
             except Exception as e:
                 print(f"[WARNING] Failed to delete old synthetic file '{synthetic_file}': {e}")
 
-            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(self.enrollment_csv)
+            username = self.data_utility.load_csv_key_features(self.enrollment_csv)
 
             # Generate synthetic rows
             try:
                 self.data_utility.generate_synthetic_features(
-                    username=username,
                     filename=synthetic_file,
                     repetitions=self.synth_reps
                 )
@@ -90,7 +89,7 @@ class DataPreprocessor:
                 print("[FATAL] No enrollment dataset. Cannot proceed.")
                 return None
             print("[DataProcessor] Generating synthetic samples via DataUtility...")
-            synth_df = self.generate_synthetic(self.enrollment_csv, self.username)
+            synth_df = self.generate_synthetic(self.enrollment_csv)
             if synth_df is None:
                 synth_df = pd.DataFrame()
 

@@ -1,6 +1,6 @@
 from src.utils.data_collector import DataCollector
 from src.utils.feature_extractor import FeatureExtractor
-from src.utils.keystroke_dataset_reader import KeystrokeDatasetReader
+from src.ml.keystroke_dataset_reader import KeystrokeDatasetReader
 from src.utils.synthetic_features_generator import SyntheticFeaturesGenerator
 
 class DataUtility:
@@ -9,7 +9,6 @@ class DataUtility:
         self.feature_extractor = FeatureExtractor()
         self.synthetic_features_generator_genuine_user = SyntheticFeaturesGenerator()
         self.synthetic_features_generator_imposter_users = SyntheticFeaturesGenerator()
-        self.synthetic_features_generator_other_users = SyntheticFeaturesGenerator()
         self.keystrokeDatasetReader = KeystrokeDatasetReader()
 
     def start(self):
@@ -19,44 +18,45 @@ class DataUtility:
         self.data_collector.collect_key_event(event, event_type)
 
     def extract_features(self, username):
-        self.data_collector.username = username
-        self.feature_extractor.username = username
+        self.set_username(username=username)
         self.feature_extractor.raw_key_data = self.data_collector.data
         self.data_collector.save_key_raw_csv(filename="raw.csv")
         self.feature_extractor.extract_key_features()
 
-    def generate_synthetic_features(self, username, filename, repetitions=10):
-        self.feature_extractor.username = username
-        self.synthetic_features_generator_genuine_user.username = username
+    def generate_synthetic_features(self, filename, repetitions=10):
         self.synthetic_features_generator_genuine_user.genuine_features = self.feature_extractor.preprocess_features_for_synthesis()
-        #print("GENUINE FEATURES: ")
-        #print(self.synthetic_features_generator.genuine_features)
-        # add generation function and some parameters for it, change the loop to internal generator logic
+        print("GENUINE FEATURES: ")
+        print(self.synthetic_features_generator_genuine_user.genuine_features)
+        generated_features = self.synthetic_features_generator_genuine_user.generate(repetitions=repetitions)
+
         for i in range(0, repetitions):
-            generated_features = self.synthetic_features_generator_genuine_user.generate()
-            #print("GENERATED FEATURES in DATA UTILITY:")
-            #print(generated_features)
-            new_metadata = {"subject" : username,
+            new_metadata = {"subject" : self.feature_extractor.username,
                             "sessionIndex": -1,
                             "generated" : 1,
                             "rep": i}
-            # new_metadata["subject"] = username
-            # new_metadata["sessionIndex"] = -1
-            # new_metadata["generated"] = 1
-            # new_metadata["rep"] = i
-            self.feature_extractor.key_features.update(metadata=new_metadata, features=generated_features)
-            #print("GENERATED FEATURES in FEATURE EXTRACTOR:")
-            #print(self.feature_extractor.key_features.features)
+
+            self.feature_extractor.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
+            print("GENERATED FEATURES in FEATURE EXTRACTOR:")
+            print(self.feature_extractor.key_features.features)
             self.save_features_csv(filename=filename,append=True)
 
 
 
     def generate_synthetic_features_other_users(self, username, filename, repetitions=1):
-        dataset_dir = "C:\\Users\\anast\\src\\repos\\behavior-biometric-authentication\\datasets\\DATASET"
-        self.keystrokeDatasetReader.generate_features_file()
-        hold_features, flight_features, ud_features = self.keystrokeDatasetReader.generate_features_file()
-        self.synthetic_features_generator_imposter_users.generate_other_users()
+        hold_features, dd_features, ud_features = self.keystrokeDatasetReader.generate_features_file()
+        self.synthetic_features_generator_imposter_users.generated_features(hold_features=hold_features, dd_features=dd_features, ud_features=ud_features)
         # save it to DSL-StrongPasswordData.csv
+
+    def load_csv_key_features(self, filename: str) -> str:
+        username = self.feature_extractor.load_csv_key_features(filename)
+        self.set_username(username=username)
+        return username
+
+    def set_username(self, username: str):
+        self.data_collector.set_username(username=username)
+        self.feature_extractor.set_username(username=username)
+        self.synthetic_features_generator_genuine_user.set_username(username=username)
+        self.synthetic_features_generator_imposter_users.set_username(username=username)
 
     def save_raw_csv(self, filename=None):
         self.data_collector.save_key_raw_csv(filename)
@@ -68,6 +68,6 @@ class DataUtility:
         self.data_collector.clear_for_next_rep()
         self.feature_extractor.clear_for_next_rep()
 
-
-testDataUtility = DataUtility()
-testDataUtility.generate_synthetic_features_other_users(username="test", filename="synthetic_features_other_users.csv", repetitions=1)
+#
+# testDataUtility = DataUtility()
+# testDataUtility.generate_synthetic_features_other_users(username="test", filename="synthetic_features_other_users.csv", repetitions=1)

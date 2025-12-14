@@ -32,6 +32,9 @@ class FeatureExtractor:
         """Create global features folder inside project root."""
         os.makedirs(self.FEATURES_DIR, exist_ok=True)
 
+    def set_username(self, username: str):
+        self.username = username
+
     def extract_key_features(self):
         df = pd.DataFrame([e.to_dict() for e in self.raw_key_data])
         df = df.sort_values('timestamp').reset_index(drop=True)
@@ -135,8 +138,10 @@ class FeatureExtractor:
             print(f"Failed to save features CSV: {e}")
             return False
 
-        print(f"Features saved to {filename} (append={append})")
-        return True
+
+    def load_csv_key_features(self, filename: str) -> str:
+        username = self.key_features.load_csv_features_all_rows(filename)
+        return username
 
     def preprocess_features_for_synthesis(self):
         return self.key_features.all_features

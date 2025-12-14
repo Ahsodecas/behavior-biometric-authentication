@@ -168,10 +168,9 @@ class AuthenticationWindow(QWidget):
 
         metadata = {}
         features = {}
-        username = ""
 
         try:
-            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
+            self.username = self.data_utility.load_csv_key_features(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
             #print("Features read: ")
@@ -181,7 +180,7 @@ class AuthenticationWindow(QWidget):
                 if self.enroll_append else
                 f"{self.enroll_count}_{self.enroll_filename}"
             )
-            self.data_utility.generate_synthetic_features(username, filename, repetitions=10)
+            self.data_utility.generate_synthetic_features(filename, repetitions=10)
 
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
@@ -587,10 +586,7 @@ class AuthenticationWindow(QWidget):
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
         self.skip_enroll_button.clicked.connect(self.load_csv_data)
-<<<<<<< HEAD
-        self.skip_enroll_button.setProperty("class", "primary")
-=======
->>>>>>> main
+
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()

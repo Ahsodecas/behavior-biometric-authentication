@@ -1,13 +1,10 @@
 import os
 import csv
 
-from src.utils.synthetic_features_generator import SyntheticFeaturesGenerator
-
-
 class KeystrokeDatasetReader:
     def __init__(self):
         self.features = []
-        self.dataset_dir = "C:\\Users\\anast\\src\\repos\\behavior-biometric-authentication\\datasets\\DATASET"
+        self.dataset_dir = "/datasets/DATASET"
         self.filename = "DSL-StrongPasswordData.csv"
 
     VK_TO_TOKEN = {
@@ -42,13 +39,13 @@ class KeystrokeDatasetReader:
         hold_features, flight_features, ud_features = self.read_human_hold_flight_features()
         return hold_features, flight_features, ud_features
 
-    def create_key_sequence(self, password: str):
-        key_sequence = []
-
-        for symbol in password:
-            key_sequence.append(symbol)
-
-        return key_sequence
+    # def create_key_sequence(self, password: str):
+    #     key_sequence = []
+    #
+    #     for symbol in password:
+    #         key_sequence.append(symbol)
+    #
+    #     return key_sequence
 
     def read_human_hold_flight_features(self):
         hold_features = []
@@ -117,20 +114,20 @@ class KeystrokeDatasetReader:
                     dd_features.append((key, dd_norm))
                     ud_features.append((key, ud_norm))
 
-        print("READ HOLD FEATURES FROM FILE: ")
-        #print(hold_features)
-
-        print("READ DD FEATURES FROM FILE: ")
-        #print(dd_features)
-
-        print("READ UD FEATURES FROM FILE: ")
+        # print("READ HOLD FEATURES FROM FILE: ")
+        # print(hold_features)
+        #
+        # print("READ DD FEATURES FROM FILE: ")
+        # print(dd_features)
+        #
+        # print("READ UD FEATURES FROM FILE: ")
         # print(ud_features)
-
-        print("COUNT OF DOTS: ")
-        print(count)
-
-        print("COUNT OF A: ")
-        print(count_a)
+        #
+        # print("COUNT OF DOTS: ")
+        # print(count)
+        #
+        # print("COUNT OF A: ")
+        # print(count_a)
         return hold_features, dd_features, ud_features
 
 # generator = SyntheticFeaturesGenerator("test_generate_other_users")
