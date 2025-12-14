@@ -139,6 +139,7 @@ class AuthenticationWindow(QWidget):
             return
 
         self.username = username
+        self.authenticator.username = self.username
         self.enroll_count = 0
         self.mode = "enrollment"
         self.setup_enrollment_mode()
@@ -159,6 +160,7 @@ class AuthenticationWindow(QWidget):
             return
 
         self.username = username
+        self.authenticator.username = username
         self.mode = "authentication"
         self.authenticator.load_model(model_path)
         self.setup_authentication_mode()

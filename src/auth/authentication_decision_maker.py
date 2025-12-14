@@ -15,8 +15,9 @@ class AuthenticationDecisionMaker:
     The GUI should only call authenticator.authenticate().
     """
 
-    def __init__(self, password_fixed=".tie5Roanl", threshold=0.4):
+    def __init__(self, username=None, password_fixed=".tie5Roanl", threshold=0.4):
         self.password_fixed = password_fixed
+        self.username = username
         self.threshold = threshold
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -40,7 +41,7 @@ class AuthenticationDecisionMaker:
         #   - scaler
         #   - feature columns
         # -------------------------------
-        training_csv = "datasets/ksenia_training.csv"
+        training_csv = f"datasets/{self.username}_training.csv"
 
         if not os.path.exists(training_csv):
             raise FileNotFoundError(f"Training CSV not found: {training_csv}")
