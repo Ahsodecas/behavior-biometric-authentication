@@ -34,6 +34,7 @@ class FeatureExtractor:
 
     def set_username(self, username: str):
         self.username = username
+        print(f"USERNAME IN FEATURE EXTRACTOR SET {username}")
 
     def extract_key_features(self):
         df = pd.DataFrame([e.to_dict() for e in self.raw_key_data])

@@ -270,7 +270,7 @@ class SyntheticFeaturesGenerator:
         if hold_features is None or dd_flight_features is None or ud_flight_features is None:
             hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
 
-        print("FEATURE SPLITTED SUCCESSFULLY")
+        # print("FEATURE SPLIT SUCCESSFULLY")
 
         self.generated_features = [[] for _ in range(repetitions)]
 
@@ -279,31 +279,31 @@ class SyntheticFeaturesGenerator:
         decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["hold"])
 
-        print("HOLD CONTEXT SETS CREATED SUCCESSFULLY")
+        # print("HOLD CONTEXT SETS CREATED SUCCESSFULLY")
         decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["DD"])
-        print("DD CONTEXT SETS CREATED SUCCESSFULLY")
+        # print("DD CONTEXT SETS CREATED SUCCESSFULLY")
 
         decisions_ud = self.select_contexts_for_sequence(ud_flight_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["UD"])
 
-        print("UD CONTEXT SETS CREATED SUCCESSFULLY")
+        # print("UD CONTEXT SETS CREATED SUCCESSFULLY")
 
         self.generate_features_from_decisions(decisions_hold, key_sequence=key_sequence,
                                               channel=self.channels["hold"],generating_function="icdf",
                                               repetitions=repetitions)
 
-        print("HOLD FEATURES GENERATED SUCCESSFULLY")
+        # print("HOLD FEATURES GENERATED SUCCESSFULLY")
         self.generate_features_from_decisions(decisions_dd, key_sequence=key_sequence,
                                               channel=self.channels["DD"], generating_function="icdf",
                                               repetitions=repetitions)
 
-        print("DD FEATURES GENERATED SUCCESSFULLY")
+        # print("DD FEATURES GENERATED SUCCESSFULLY")
         self.generate_features_from_decisions(decisions_ud, key_sequence=key_sequence,
                                               channel=self.channels["UD"], generating_function="icdf",
                                               repetitions=repetitions)
 
-        print("UD FEATURES GENERATED SUCCESSFULLY")
+        # print("UD FEATURES GENERATED SUCCESSFULLY")
 
         # print("DECISIONS FOR HOLD KEY SEQUENCE: ")
         # print(decisions_hold)
@@ -329,9 +329,10 @@ class SyntheticFeaturesGenerator:
             ordered_features = []
 
             for idx, curr_key in enumerate(key_sequence):
-                hold_name = f"H.{curr_key}"
-                if hold_name in hold_dict:
-                    ordered_features.append((hold_name, hold_dict[hold_name]))
+                if idx == 0:
+                    hold_name = f"H.{curr_key}"
+                    if hold_name in hold_dict:
+                        ordered_features.append((hold_name, hold_dict[hold_name]))
 
                 if idx > 0:
                     prev_key = key_sequence[idx - 1]
@@ -339,11 +340,14 @@ class SyntheticFeaturesGenerator:
                     if dd_name in dd_dict:
                         ordered_features.append((dd_name, dd_dict[dd_name]))
 
-                if idx > 0:
                     prev_key = key_sequence[idx - 1]
                     ud_name = f"UD.{prev_key}.{curr_key}"
                     if ud_name in ud_dict:
                         ordered_features.append((ud_name, ud_dict[ud_name]))
+
+                    hold_name = f"H.{curr_key}"
+                    if hold_name in hold_dict:
+                        ordered_features.append((hold_name, hold_dict[hold_name]))
 
             self.generated_features[rep] = ordered_features
             # print(f"ORDERED FEATURES FOR ROW {rep}:")

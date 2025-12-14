@@ -38,7 +38,7 @@ class DataUtility:
             self.feature_extractor.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
             print("GENERATED FEATURES in FEATURE EXTRACTOR:")
             print(self.feature_extractor.key_features.features)
-            self.save_features_csv(filename=filename,append=True)
+            self.save_features_csv(filename=filename, append=True)
 
 
 

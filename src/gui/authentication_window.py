@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QFrame
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
+from numpy.f2py.crackfortran import usermodules
 
 from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
@@ -129,7 +130,8 @@ class AuthenticationWindow(QWidget):
                 return
 
             # Feature extraction
-            self.data_utility.extract_features(username)
+            self.data_utility.set_username(username=username)
+            self.data_utility.extract_features(username=username)
             filename = "enrollment_features.csv"
 
 
@@ -171,6 +173,7 @@ class AuthenticationWindow(QWidget):
 
         try:
             self.username = self.data_utility.load_csv_key_features(file_path)
+            print("SELF WINDOW USERNAME IS", self.username)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
             #print("Features read: ")
@@ -180,6 +183,7 @@ class AuthenticationWindow(QWidget):
                 if self.enroll_append else
                 f"{self.enroll_count}_{self.enroll_filename}"
             )
+            self.data_utility.set_username(username=self.username)
             self.data_utility.generate_synthetic_features(filename, repetitions=10)
 
         except Exception as e:
@@ -244,6 +248,7 @@ class AuthenticationWindow(QWidget):
             self.train_button.setEnabled(False)
 
             username = self.username
+            self.data_utility.set_username(username=username)
 
             preprocessor = DataPreprocessor(
                 enrollment_csv=os.path.join(PATH_EXTRACTED, username, "enrollment_features.csv"),
@@ -364,7 +369,7 @@ class AuthenticationWindow(QWidget):
                 return
 
             try:
-                self.data_utility.username = username
+                self.data_utility.set_username(username=username)
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_raw_csv(filename="raw.csv")
