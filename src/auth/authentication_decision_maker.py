@@ -15,7 +15,7 @@ class AuthenticationDecisionMaker:
     The GUI should only call authenticator.authenticate().
     """
 
-    def __init__(self, username=None, password_fixed=".tie5Roanl", threshold=0.4):
+    def __init__(self, username=None, password_fixed=".tie5Roanl", threshold=0.1):
         self.password_fixed = password_fixed
         self.username = username
         self.threshold = threshold

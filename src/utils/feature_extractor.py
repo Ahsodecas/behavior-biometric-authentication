@@ -83,7 +83,7 @@ class FeatureExtractor:
             })
 
         # --- build token list from password (automatic) ---
-        PASSWORD = ".tie5Roanl"  # keep this here or read from config
+        PASSWORD = ".tie5Roanl"
         tokens = []
         for ch in PASSWORD:
             if ch.isupper():

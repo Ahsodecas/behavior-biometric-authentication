@@ -15,8 +15,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
     QHBoxLayout, QFrame
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
-
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
 
 from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
