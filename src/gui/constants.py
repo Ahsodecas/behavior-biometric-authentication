@@ -8,3 +8,5 @@ PATH_DATASETS = os.path.join(PROJECT_ROOT, "datasets")
 PATH_EXTRACTED = os.path.join(PROJECT_ROOT, "extracted_features")
 
 MODEL_PATH = os.path.join(PATH_MODELS, "snn_final.pt")
+
+PASSWORD = ".tie5Roanl"

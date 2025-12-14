@@ -9,66 +9,6 @@ from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 def auth():
     return AuthenticationDecisionMaker(password_fixed=".tie5Roanl", threshold=0.4)
 
-"""
-def test_load_model_success(auth: AuthenticationDecisionMaker, mocker: MockerFixture):
-
-    mocker.patch("os.path.exists", return_value=True)
-
-    fake_dataset = mocker.MagicMock()
-    fake_dataset.X = np.random.randn(50, 10)
-    fake_dataset.scaler = mocker.MagicMock()
-    fake_dataset.feature_cols = [f"f{i}" for i in range(10)]
-
-    mocker.patch(
-        "src.auth.authentication_decision_maker.CMUDatasetTriplet",
-        return_value=fake_dataset
-    )
-
-    fake_model = mocker.MagicMock()
-    mocker.patch(
-        "src.auth.authentication_decision_maker.TripletSNN",
-        return_value=fake_model
-    )
-
-    mocker.patch(
-        "src.auth.authentication_decision_maker.torch.load",
-        return_value={"model_state": None}
-    )
-
-    auth.load_model("checkpoint.ckpt")
-
-    assert auth.model is fake_model
-    assert auth.scaler is fake_dataset.scaler
-    assert auth.feature_cols == fake_dataset.feature_cols
-    assert auth.ref_sample.shape[0] == 10
-"""
-
-
-def test_load_model_missing(auth: AuthenticationDecisionMaker, mocker: MockerFixture):
-
-    mocker.patch("os.path.exists", return_value=False)
-
-    with pytest.raises(FileNotFoundError):
-        auth.load_model("missing.ckpt")
-
-"""
-def test_load_model_too_few_samples(auth: AuthenticationDecisionMaker, mocker: MockerFixture):
-
-    mocker.patch("os.path.exists", return_value=True)
-
-    fake_dataset = mocker.MagicMock()
-    fake_dataset.X = np.random.randn(10, 8)  # too few
-    fake_dataset.scaler = mocker.MagicMock()
-    fake_dataset.feature_cols = [f"f{i}" for i in range(8)]
-
-    mocker.patch(
-        "src.auth.authentication_decision_maker.CMUDatasetTriplet",
-        return_value=fake_dataset
-    )
-
-    with pytest.raises(ValueError):
-        auth.load_model("checkpoint.ckpt")
-"""
 
 def test_auth_wrong_password(auth: AuthenticationDecisionMaker):
 

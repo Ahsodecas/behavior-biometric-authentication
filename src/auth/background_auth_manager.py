@@ -4,6 +4,7 @@ import os
 import csv
 import time
 from threading import Thread, Event
+import torch
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 
 from src.utils.data_utility import DataUtility

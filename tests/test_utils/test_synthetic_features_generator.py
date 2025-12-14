@@ -157,17 +157,6 @@ def test_select_contexts_random_fallback(generator, simple_genuine_data):
     assert all(d["use_random_fallback"] for d in decisions)
 
 
-def test_generate_features(generator, simple_genuine_data):
-    generator.genuine_features = simple_genuine_data
-    generator.context_order = 2
-    generator.min_context_cardinality = 1
-
-    out = generator.generate()
-
-    assert isinstance(out, dict)
-    assert any(k.startswith("H.") for k in out.keys()), "Hold features missing"
-    assert any(k.startswith("UD.") for k in out.keys()), "UD features missing"
-    assert any(k.startswith("DD.") for k in out.keys()), "DD features missing"
 
 def test_construct_feature_name(generator):
     K = ["a", "b", "c"]

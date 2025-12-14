@@ -23,7 +23,6 @@ class DummyQtEvent:
 
 @pytest.fixture
 def collector(tmp_path):
-    """Return a DataCollector with a temporary directory."""
     dc = DataCollector(username="test_user")
     dc.data_dir = tmp_path  # Override to avoid writing to real disk
     return dc

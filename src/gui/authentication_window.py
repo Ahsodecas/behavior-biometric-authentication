@@ -55,7 +55,6 @@ class AuthenticationWindow(QWidget):
             self.enroll_count = 0
             self.enroll_filename = "enrollment_features.csv"
             self.enroll_append = True
-            self.password_fixed = ".tie5Roanl"
             self.username = ""
 
             # Core helpers
@@ -115,7 +114,7 @@ class AuthenticationWindow(QWidget):
                 self.data_utility.reset()
                 return
 
-            if password != self.password_fixed:
+            if password != constants.PASSWORD:
                 QMessageBox.warning(self, "Enrollment", "Password does not match.")
                 self.password_entry.clear()
                 self.data_utility.reset()
@@ -522,7 +521,7 @@ class AuthenticationWindow(QWidget):
     def add_card_layout_instructions(self, card_layout):
         instr = QLabel(
             f"Please type your password exactly {self.enroll_target} times.\n"
-            f"Password must be: {self.password_fixed}"
+            f"Password must be: {constants.PASSWORD}"
         )
         instr.setProperty("class", "instr")
         instr.setAlignment(Qt.AlignCenter)

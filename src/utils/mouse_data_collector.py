@@ -1,4 +1,3 @@
-# src/utils/mouse_collector.py
 from pynput import mouse
 from threading import Thread
 import time
