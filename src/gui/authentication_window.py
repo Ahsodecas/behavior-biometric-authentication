@@ -21,11 +21,11 @@ from numpy.f2py.crackfortran import usermodules
 from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
-from src.auth.security_controller import SecurityController
 from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
+from src.auth.background_auth_manager import BackgroundAuthManager
 from src.ml.model_trainer import ModelTrainer
 
 
@@ -67,7 +67,6 @@ class AuthenticationWindow(QWidget):
 
             # Core helpers
             self.data_utility = DataUtility()
-            self.security_controller = SecurityController(threshold=0.3)
             self.authenticator = AuthenticationDecisionMaker(threshold=0.3)
 
             # UI setup
@@ -130,8 +129,7 @@ class AuthenticationWindow(QWidget):
                 return
 
             # Feature extraction
-            self.data_utility.set_username(username=username)
-            self.data_utility.extract_features(username=username)
+            self.data_utility.extract_features(username)
             filename = "enrollment_features.csv"
 
 
@@ -170,10 +168,10 @@ class AuthenticationWindow(QWidget):
 
         metadata = {}
         features = {}
+        username = ""
 
         try:
-            self.username = self.data_utility.load_csv_key_features(file_path)
-            print("SELF WINDOW USERNAME IS", self.username)
+            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
             #print("Features read: ")
@@ -183,7 +181,7 @@ class AuthenticationWindow(QWidget):
                 if self.enroll_append else
                 f"{self.enroll_count}_{self.enroll_filename}"
             )
-            self.data_utility.set_username(username=self.username)
+            self.data_utility.generate_synthetic_features(username, filename, repetitions=10)
 
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
@@ -247,7 +245,6 @@ class AuthenticationWindow(QWidget):
             self.train_button.setEnabled(False)
 
             username = self.username
-            self.data_utility.set_username(username=username)
 
             preprocessor = DataPreprocessor(
                 enrollment_csv=os.path.join(PATH_EXTRACTED, username, "enrollment_features.csv"),
@@ -368,7 +365,7 @@ class AuthenticationWindow(QWidget):
                 return
 
             try:
-                self.data_utility.set_username(username=username)
+                self.data_utility.username = username
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_raw_csv(filename="raw.csv")
@@ -590,7 +587,6 @@ class AuthenticationWindow(QWidget):
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
         self.skip_enroll_button.clicked.connect(self.load_csv_data)
-
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()
