@@ -9,6 +9,7 @@ class DataUtility:
         self.data_collector = DataCollector()
         self.feature_extractor = FeatureExtractor()
         self.synthetic_features_generator_genuine_user = SyntheticFeaturesGenerator()
+        self.feature_extractor_imposter_users = FeatureExtractor(username="imposter")
         self.synthetic_features_generator_imposter_users = SyntheticFeaturesGenerator(username="imposter")
         self.keystrokeDatasetReader = KeystrokeDatasetReader()
         self.mouse_data_collector = MouseDataCollector(username=username)
@@ -41,13 +42,23 @@ class DataUtility:
         self.save_generated_features_csv(generated_features=generated_features, filename=filename, append=True, repetitions=repetitions)
 
 
-    def generate_synthetic_features_imposter_users(self, filename, repetitions=1):
+    def generate_synthetic_features_imposter_users(self, filename: str, repetitions: int = 1):
         hold_features, dd_features, ud_features = self.keystrokeDatasetReader.load_key_dataset()
         generated_features = self.synthetic_features_generator_imposter_users.generate(hold_features=hold_features, dd_features=dd_features, ud_features=ud_features, repetitions=repetitions)
         print("GENERATED IMPOSTER FEATURES, REPETITIONS: " + str(repetitions))
         print(generated_features)
         self.save_generated_features_csv(generated_features=generated_features, filename=filename, append=True, repetitions=repetitions)
 
+        for i in range(0, repetitions):
+            new_metadata = {"subject" : self.feature_extractor_imposter_users.username,
+                            "sessionIndex": -1,
+                            "generated" : 1,
+                            "rep": i}
+
+            self.feature_extractor_imposter_users.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
+            print("GENERATED FEATURES in FEATURE EXTRACTOR:")
+            print(self.feature_extractor_imposter_users.key_features.features)
+            self.save_features_csv(filename=filename, append=True)
 
     def save_generated_features_csv(self, generated_features: list[list[tuple[str, float]]], filename: str, append: bool = True, repetitions: int = 1):
 

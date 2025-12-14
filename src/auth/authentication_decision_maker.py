@@ -7,6 +7,7 @@ from src.ml.snn_model import TripletSNN
 from src.ml.triplet_dataset import CMUDatasetTriplet
 import pandas as pd
 
+import src.gui.constants as constants
 
 class AuthenticationDecisionMaker:
     """
@@ -28,7 +29,7 @@ class AuthenticationDecisionMaker:
     # ---------------------------------------------------------
     # ------------ LOAD MODEL + SCALER + REF SAMPLE ----------
     # ---------------------------------------------------------
-    def load_model(self, ckpt_path):
+    def load_model(self, ckpt_path, username):
         # -------------------------------
         # Checkpoint file must exist
         # -------------------------------
@@ -40,7 +41,7 @@ class AuthenticationDecisionMaker:
         #   - scaler
         #   - feature columns
         # -------------------------------
-        training_csv = "datasets/ksenia_training.csv"
+        training_csv = "ksenia_training_2.csv"
 
         if not os.path.exists(training_csv):
             raise FileNotFoundError(f"Training CSV not found: {training_csv}")

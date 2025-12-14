@@ -101,7 +101,7 @@ class ExtractedFeatures:
                 features = {}
 
                 for key, val in row.items():
-                    print("key: " + key + " val: " + str(val))
+                    # print("key: " + key + " val: " + str(val))
                     if key in ["subject", "sessionIndex", "rep", "generated"]:
                         try:
                             if key == "subject":

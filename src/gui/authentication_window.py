@@ -33,14 +33,7 @@ from src.ml.model_trainer import ModelTrainer
 #  CONSTANTS & GLOBAL CONFIG
 # =====================================================================
 
-
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(os.path.dirname(ROOT_DIR))
-PATH_MODELS = os.path.join(PROJECT_ROOT, "models")
-PATH_DATASETS = os.path.join(PROJECT_ROOT, "datasets")
-PATH_EXTRACTED = os.path.join(PROJECT_ROOT, "extracted_features")
-
-MODEL_PATH = os.path.join(PATH_MODELS, "snn_final.pt")
+import src.gui.constants as constants
 
 # =====================================================================
 #  MAIN AUTHENTICATION WINDOW CLASS
@@ -171,7 +164,8 @@ class AuthenticationWindow(QWidget):
         username = ""
 
         try:
-            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
+            self.username = self.data_utility.load_csv_key_features(file_path)
+            self.data_utility.set_username(self.username)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
             #print("Features read: ")
@@ -181,7 +175,6 @@ class AuthenticationWindow(QWidget):
                 if self.enroll_append else
                 f"{self.enroll_count}_{self.enroll_filename}"
             )
-            self.data_utility.generate_synthetic_features(username, filename, repetitions=10)
 
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
@@ -245,17 +238,18 @@ class AuthenticationWindow(QWidget):
             self.train_button.setEnabled(False)
 
             username = self.username
+            self.data_utility.set_username(username=username)
 
             preprocessor = DataPreprocessor(
-                enrollment_csv=os.path.join(PATH_EXTRACTED, username, "enrollment_features.csv"),
-                dsl_dataset_csv=os.path.join(PATH_DATASETS, "DSL-StrongPasswordData.csv"),
+                enrollment_csv=os.path.join(constants.PATH_EXTRACTED, username, "enrollment_features.csv"),
+                dsl_dataset_csv=os.path.join(constants.PATH_DATASETS, "DSL-StrongPasswordData.csv"),
                 username=username,
-                output_csv=os.path.join(PATH_DATASETS, f"{username}_training.csv")
+                output_csv=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv")
             )
 
             trainer = ModelTrainer(
-                csv_path=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
-                out_dir=PATH_MODELS,
+                csv_path=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv"),
+                out_dir=constants.PATH_MODELS,
                 batch_size=64,
                 lr=1e-3
             )
@@ -366,6 +360,7 @@ class AuthenticationWindow(QWidget):
 
             try:
                 self.data_utility.username = username
+                self.data_utility.set_username(username=username)
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_raw_csv(filename="raw.csv")
@@ -424,7 +419,7 @@ class AuthenticationWindow(QWidget):
             elif text == "Authentication":
                 self.mode = "authentication"
                 try:
-                    self.authenticator.load_model(MODEL_PATH)
+                    self.authenticator.load_model(constants.MODEL_PATH, self.username)
                 except Exception as e:
                     QMessageBox.critical(self, "Model load failed", str(e))
                     return
