@@ -64,6 +64,10 @@ class FeatureExtractor:
         """Create global features folder inside project root."""
         os.makedirs(self.FEATURES_DIR, exist_ok=True)
 
+    def set_username(self, username: str):
+        self.username = username
+        print(f"USERNAME IN FEATURE EXTRACTOR SET {username}")
+
     def extract_key_features(self):
         """
         Robust extractor: builds token list from password, finds press/release times
@@ -293,7 +297,12 @@ class FeatureExtractor:
             print(f"Failed to save features CSV: {e}")
             return False
 
-    def prepocess_features_for_synthesis(self):
+
+    def load_csv_key_features(self, filename: str) -> str:
+        username = self.key_features.load_csv_features_all_rows(filename)
+        return username
+
+    def preprocess_features_for_synthesis(self):
         return self.key_features.all_features
 
     def clear_data(self):

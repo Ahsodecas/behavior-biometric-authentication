@@ -16,6 +16,11 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QFrame
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
+from numpy.f2py.crackfortran import usermodules
+
+from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
+from sklearn.preprocessing import StandardScaler
 
 from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.training_worker import TrainingWorker
@@ -28,6 +33,8 @@ from src.ml.model_trainer import ModelTrainer
 # =====================================================================
 #  CONSTANTS & GLOBAL CONFIG
 # =====================================================================
+
+import src.gui.constants as constants
 
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -59,7 +66,7 @@ class AuthenticationWindow(QWidget):
             self.enroll_count = 0
             self.enroll_filename = "enrollment_features.csv"
             self.enroll_append = True
-            self.password_fixed = ".tie5Roanl"
+            self.username = ""
 
             # ---------------- Core helpers ----------------
             self.data_utility = DataUtility()
@@ -199,27 +206,47 @@ class AuthenticationWindow(QWidget):
     def submit_enrollment_sample(self):
         password = self.password_entry.text()
 
-        if password != self.password_fixed:
-            QMessageBox.warning(self, "Enrollment", "Password does not match")
+            # Validation
+            if not username:
+                QMessageBox.warning(self, "Enrollment", "Enter a username.")
+                self.password_entry.clear()
+                self.data_utility.reset()
+                return
+
+            if password != constants.PASSWORD:
+                QMessageBox.warning(self, "Enrollment", "Password does not match.")
+                self.password_entry.clear()
+                self.data_utility.reset()
+                return
+
+            # Feature extraction
+            self.data_utility.extract_features(username)
+            filename = "enrollment_features.csv"
+
+
+            self.data_utility.save_features_csv(
+                filename=filename,
+                append=self.enroll_append
+            )
+
+            # Update progress
+            self.enroll_count += 1
+            self.progress_label.setText(
+                f"Samples collected: {self.enroll_count} / {self.enroll_target}"
+            )
+
             self.password_entry.clear()
-            self.data_utility.reset(failed=True)
-            return
+            self.data_utility.reset()
 
-        self.data_utility.extract_features(self.username)
-        self.data_utility.save_features_csv(self.enroll_filename, append=True)
+            if self.enroll_count >= self.enroll_target:
+                QMessageBox.information(
+                    self,
+                    "Enrollment Complete",
+                    f"Collected {self.enroll_target} samples."
+                )
 
-        self.enroll_count += 1
-        self.progress_label.setText(
-            f"Samples collected: {self.enroll_count} / {self.enroll_target}"
-        )
-
-        self.password_entry.clear()
-        self.data_utility.reset()
-
-        if self.enroll_count >= self.enroll_target:
-            QMessageBox.information(self, "Enrollment", "Enrollment complete")
-            self.mode = "training"
-            self.setup_training_mode()
+        except Exception as e:
+            QMessageBox.critical(self, "Enrollment Error", str(e))
 
     def load_csv_data(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Features CSV", "", "CSV Files (*.csv)")
@@ -235,7 +262,8 @@ class AuthenticationWindow(QWidget):
         username = ""
 
         try:
-            username = self.data_utility.feature_extractor.key_features.load_csv_features_all_rows(file_path)
+            self.username = self.data_utility.load_csv_key_features(file_path)
+            self.data_utility.set_username(self.username)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
 
             #print("Features read: ")
@@ -245,7 +273,6 @@ class AuthenticationWindow(QWidget):
                 if self.enroll_append else
                 f"{self.enroll_count}_{self.enroll_filename}"
             )
-            self.data_utility.generate_synthetic_features(username, filename, repetitions=10)
 
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
@@ -306,19 +333,18 @@ class AuthenticationWindow(QWidget):
             self.train_button.setEnabled(False)
 
             username = self.username
+            self.data_utility.set_username(username=username)
 
             preprocessor = DataPreprocessor(
-                enrollment_csv=os.path.join(PATH_EXTRACTED, username, f"enrollment_features.csv"),
-                dsl_dataset_csv=os.path.join(PATH_DATASETS, "DSL-StrongPasswordData.csv"),
+                enrollment_csv=os.path.join(constants.PATH_EXTRACTED, username, "enrollment_features.csv"),
+                dsl_dataset_csv=os.path.join(constants.PATH_DATASETS, "DSL-StrongPasswordData.csv"),
                 username=username,
-                output_csv=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
-                synth_reps=0
+                output_csv=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv")
             )
 
             trainer = ModelTrainer(
-                csv_path=os.path.join(PATH_DATASETS, f"{username}_training.csv"),
-                out_dir=PATH_MODELS,
-                username=username,
+                csv_path=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv"),
+                out_dir=constants.PATH_MODELS,
                 batch_size=64,
                 lr=1e-3
             )
@@ -745,7 +771,7 @@ class AuthenticationWindow(QWidget):
     def add_card_layout_instructions(self, card_layout):
         instr = QLabel(
             f"Please type your password exactly {self.enroll_target} times.\n"
-            f"Password must be: {self.password_fixed}"
+            f"Password must be: {constants.PASSWORD}"
         )
         instr.setProperty("class", "instr")
         instr.setAlignment(Qt.AlignCenter)
@@ -805,7 +831,6 @@ class AuthenticationWindow(QWidget):
         self.skip_enroll_button = QPushButton("Load CSV")
         self.skip_enroll_button.setProperty("class", "secondary")
         self.skip_enroll_button.clicked.connect(self.load_csv_data)
-        self.skip_enroll_button.setProperty("class", "primary")
         btn_row.addWidget(self.skip_enroll_button)
 
         btn_row.addStretch()

@@ -101,11 +101,12 @@ class ExtractedFeatures:
                 features = {}
 
                 for key, val in row.items():
-                    #print("key: " + key + " val: " + str(val))
+                    # print("key: " + key + " val: " + str(val))
                     if key in ["subject", "sessionIndex", "rep", "generated"]:
                         try:
                             if key == "subject":
                                 username = str(val)
+                                print("READ USERNAME IS " + username)
                             else:
                                 val = int(val)
                         except Exception:
@@ -136,4 +137,5 @@ class ExtractedFeatures:
         except Exception as e:
             print(f"Failed to load CSV features: {e}")
             return None
+
 

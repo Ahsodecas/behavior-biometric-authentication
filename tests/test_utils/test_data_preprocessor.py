@@ -61,7 +61,7 @@ def test_generate_synthetic_happy_path(tmp_path, mocker):
 
     mocker.patch.object(dp, "load_csv", side_effect=fake_load_csv)
 
-    synth_df = dp.generate_synthetic(str(enrollment_path), "user1")
+    synth_df = dp.generate_synthetic(str(enrollment_path))
 
     assert isinstance(synth_df, pd.DataFrame)
     assert len(synth_df) == 1
@@ -81,7 +81,7 @@ def test_generate_synthetic_empty_input(tmp_path, mocker):
 
     mocker.patch.object(dp, "load_csv", return_value=pd.DataFrame())
 
-    df = dp.generate_synthetic(str(enrollment_path), "userX")
+    df = dp.generate_synthetic(str(enrollment_path))
 
     assert isinstance(df, pd.DataFrame)
     assert df.empty

@@ -1,5 +1,6 @@
 from src.utils.data_collector import DataCollector
 from src.utils.feature_extractor import FeatureExtractor
+from src.ml.keystroke_dataset_reader import KeystrokeDatasetReader
 from src.utils.synthetic_features_generator import SyntheticFeaturesGenerator
 from src.utils.mouse_data_collector import MouseDataCollector
 
@@ -7,7 +8,10 @@ class DataUtility:
     def __init__(self, username=None):
         self.data_collector = DataCollector()
         self.feature_extractor = FeatureExtractor()
-        self.synthetic_features_generator = SyntheticFeaturesGenerator()
+        self.synthetic_features_generator_genuine_user = SyntheticFeaturesGenerator()
+        self.feature_extractor_imposter_users = FeatureExtractor(username="imposter")
+        self.synthetic_features_generator_imposter_users = SyntheticFeaturesGenerator(username="imposter")
+        self.keystrokeDatasetReader = KeystrokeDatasetReader()
         self.mouse_data_collector = MouseDataCollector(username=username)
 
 
@@ -24,35 +28,60 @@ class DataUtility:
         self.data_collector.collect_key_event(event, event_type)
 
     def extract_features(self, username):
-        self.data_collector.username = username
-        self.feature_extractor.username = username
+        self.set_username(username=username)
         self.feature_extractor.raw_key_data = self.data_collector.data
         self.data_collector.save_key_raw_csv(filename="raw.csv")
         self.feature_extractor.extract_key_features()
 
-    def generate_synthetic_features(self, username, filename, repetitions=10):
-        self.feature_extractor.username = username
-        self.synthetic_features_generator.username = username
-        self.synthetic_features_generator.genuine_features = self.feature_extractor.prepocess_features_for_synthesis()
-        #print("GENUINE FEATURES: ")
-        #print(self.synthetic_features_generator.genuine_features)
-        # add generation function and some parameters for it, change the loop to internal generator logic
+    def generate_synthetic_features(self, filename, repetitions=10):
+        self.synthetic_features_generator_genuine_user.genuine_features = self.feature_extractor.preprocess_features_for_synthesis()
+        print("GENUINE FEATURES: ")
+        print(self.synthetic_features_generator_genuine_user.genuine_features)
+        generated_features = self.synthetic_features_generator_genuine_user.generate(repetitions=repetitions)
+
+        self.save_generated_features_csv(generated_features=generated_features, filename=filename, append=True, repetitions=repetitions)
+
+
+    def generate_synthetic_features_imposter_users(self, filename: str, repetitions: int = 1):
+        hold_features, dd_features, ud_features = self.keystrokeDatasetReader.load_key_dataset()
+        generated_features = self.synthetic_features_generator_imposter_users.generate(hold_features=hold_features, dd_features=dd_features, ud_features=ud_features, repetitions=repetitions)
+        print("GENERATED IMPOSTER FEATURES, REPETITIONS: " + str(repetitions))
+        print(generated_features)
+        self.save_generated_features_csv(generated_features=generated_features, filename=filename, append=True, repetitions=repetitions)
+
         for i in range(0, repetitions):
-            generated_features = self.synthetic_features_generator.generate()
-            #print("GENERATED FEATURES in DATA UTILITY:")
-            #print(generated_features)
-            new_metadata = {"subject" : username,
+            new_metadata = {"subject" : self.feature_extractor_imposter_users.username,
                             "sessionIndex": -1,
                             "generated" : 1,
                             "rep": i}
-            # new_metadata["subject"] = username
-            # new_metadata["sessionIndex"] = -1
-            # new_metadata["generated"] = 1
-            # new_metadata["rep"] = i
-            self.feature_extractor.key_features.update(metadata=new_metadata, features=generated_features)
-            #print("GENERATED FEATURES in FEATURE EXTRACTOR:")
-            #print(self.feature_extractor.key_features.features)
-            self.save_features_csv(filename=filename,append=True)
+
+            self.feature_extractor_imposter_users.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
+            print("GENERATED FEATURES in FEATURE EXTRACTOR:")
+            print(self.feature_extractor_imposter_users.key_features.features)
+            self.save_features_csv(filename=filename, append=True)
+
+    def save_generated_features_csv(self, generated_features: list[list[tuple[str, float]]], filename: str, append: bool = True, repetitions: int = 1):
+
+        for i in range(0, repetitions):
+            new_metadata = {"subject" : self.feature_extractor.username,
+                            "sessionIndex": -1,
+                            "generated" : 1,
+                            "rep": i}
+
+            self.feature_extractor.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
+            print("GENERATED FEATURES in FEATURE EXTRACTOR:")
+            print(self.feature_extractor.key_features.features)
+            self.save_features_csv(filename=filename, append=append)
+
+    def load_csv_key_features(self, filename: str) -> str:
+        username = self.feature_extractor.load_csv_key_features(filename)
+        self.set_username(username=username)
+        return username
+
+    def set_username(self, username: str):
+        self.data_collector.set_username(username=username)
+        self.feature_extractor.set_username(username=username)
+        self.synthetic_features_generator_genuine_user.set_username(username=username)
 
     def save_raw_csv(self, filename=None):
         self.data_collector.save_key_raw_csv(filename)

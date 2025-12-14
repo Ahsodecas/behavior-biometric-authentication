@@ -9,6 +9,7 @@ from threading import Event, Thread
 from PyQt5.QtCore import QObject, pyqtSignal
 
 from src.utils.data_utility import DataUtility
+from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 
 
 class BackgroundAuthManager(QObject):
@@ -37,6 +38,10 @@ class BackgroundAuthManager(QObject):
         self.data_utility = data_utility
         self.authenticator_model_path = authenticator_model_path
 
+        # Core utilities
+        self.data_utility = DataUtility(username=username)
+
+        # Thread control
         self._stop_event = Event()
         self._thread = None
 
