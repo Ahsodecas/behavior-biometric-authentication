@@ -252,6 +252,7 @@ class SyntheticFeaturesGenerator:
             elif generating_function == "icdf":
                 generate_values.append((feature_name, self.f_generating_func_icdf(d["Si"])))
 
+        print("GENERATED VALUES IN FEATURE GENERATOR:")
         print(generate_values)
         return generate_values
 
@@ -269,13 +270,15 @@ class SyntheticFeaturesGenerator:
         return ""
 
 
-    def generate(self):
+    def generate(self, hold_features = None, dd_flight_features = None, ud_flight_features = None):
         # self.build_context_sets()
-        hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
+        if hold_features is None or dd_flight_features is None or ud_flight_features is None:
+            hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
         K_sequence = [".","t", "i", "e", "5", "Shift.r", "o", "a", "n", "l"]
         channel_hold='hold'
         decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order, channel=channel_hold)
         self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold, generating_function="icdf"))
+        print("DECISIONS FOR HOLD KEY SEQUENCE: ")
         print(decisions_hold)
         channel_dd='DD'
         decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_dd)
@@ -287,10 +290,41 @@ class SyntheticFeaturesGenerator:
 
         ordered_features = self.order_generated_features(K_sequence=K_sequence)
 
-        print("Generated features:")
+        print("Generated features in feature generator final:")
         print(self.generated_features)
 
         return dict(ordered_features)
+
+    # def generate_other_users(self, hold_features, dd_flight_features, ud_flight_features):
+    #     # self.build_context_sets()
+    #     #hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
+    #     # K_sequence = [".","a", "h", "s", "o", "Shift.d", "e", "c", "a", "s"]
+    #     K_sequence = [".", "a", "h", "s", "o", "d", "e", "c", "a", "s"]
+    #     channel_hold = 'hold'
+    #     decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order,channel=channel_hold)
+    #     self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold,generating_function="icdf"))
+    #     print("DECISIONS FOR HOLD KEY SEQUENCE: ")
+    #     print(decisions_hold)
+    #     # print("COUNT OF DECISIONS FOR DOT: ")
+    #     # dot_decision_count = next(len(d["Si"]) for d in decisions_hold if d["key"] == ".")
+    #     # print(dot_decision_count)
+    #     # print("COUNT OF DECISIONS FOR A: ")
+    #     # a_decision_count = next(len(d["Si"]) for d in decisions_hold if d["key"] == "a")
+    #     # print(a_decision_count)
+    #     channel_dd = 'DD'
+    #     decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence,M=self.context_order, channel=channel_dd)
+    #     self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd, generating_function="icdf"))
+    #
+    #     channel_ud = 'UD'
+    #     decisions_ud = self.select_contexts_for_sequence(ud_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_ud)
+    #     self.generated_features.extend(self.generate_features_from_decisions(decisions_ud, K_sequence=K_sequence, channel=channel_ud, generating_function="icdf"))
+    #
+    #     ordered_features = self.order_generated_features(K_sequence=K_sequence)
+    #
+    #     print("Generated features in feature generator final:")
+    #     print(self.generated_features)
+    #
+    #     return dict(ordered_features)
 
     def order_generated_features(self, K_sequence):
         """
@@ -320,6 +354,7 @@ class SyntheticFeaturesGenerator:
                 ud_name = f"UD.{prev_key}.{curr_key}"
                 if ud_name in ud_dict:
                     ordered_features.append((ud_name, ud_dict[ud_name]))
+        print("ORDERED FEATURES:")
         print(ordered_features)
         return ordered_features
 
