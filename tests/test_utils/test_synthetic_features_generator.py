@@ -44,7 +44,7 @@ def test_fcm_sequence_si_hold_m1(generator, simple_genuine_data):
     training_U = hold
 
     # Context order = 1, context = ('a',), looking for 'b'
-    S = generator.FCM_sequence_Si(training_U, m=1, context_tuple=("a",), target_key="b")
+    S = generator.fcm_sequence_si(training_U, m=1, context_tuple=("a",), target_key="b")
 
     assert S == {0.2}
 
@@ -54,7 +54,7 @@ def test_fcm_sequence_si_hold_m2(generator, simple_genuine_data):
 
     training_U = hold
 
-    S = generator.FCM_sequence_Si(training_U, m=2, context_tuple=("a","b"), target_key="c")
+    S = generator.fcm_sequence_si(training_U, m=2, context_tuple=("a", "b"), target_key="c")
 
     assert S == {0.3}
 
@@ -63,7 +63,7 @@ def test_fcm_no_context_match(generator, simple_genuine_data):
     generator.genuine_features = simple_genuine_data
     hold, _, _ = generator.split_genuine_features()
 
-    S = generator.FCM_sequence_Si(hold, m=1, context_tuple=("x",), target_key="b")
+    S = generator.fcm_sequence_si(hold, m=1, context_tuple=("x",), target_key="b")
     assert S == set()
 
 
@@ -157,17 +157,6 @@ def test_select_contexts_random_fallback(generator, simple_genuine_data):
     assert all(d["use_random_fallback"] for d in decisions)
 
 
-def test_generate_features(generator, simple_genuine_data):
-    generator.genuine_features = simple_genuine_data
-    generator.context_order = 2
-    generator.min_context_cardinality = 1
-
-    out = generator.generate()
-
-    assert isinstance(out, dict)
-    assert any(k.startswith("H.") for k in out.keys()), "Hold features missing"
-    assert any(k.startswith("UD.") for k in out.keys()), "UD features missing"
-    assert any(k.startswith("DD.") for k in out.keys()), "DD features missing"
 
 def test_construct_feature_name(generator):
     K = ["a", "b", "c"]

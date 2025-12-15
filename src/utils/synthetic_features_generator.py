@@ -1,6 +1,7 @@
 import statistics as stat
 import random
 import numpy as np
+import src.constants as constants
 
 class SyntheticFeaturesGenerator:
     def __init__(self, username=None):
@@ -8,10 +9,14 @@ class SyntheticFeaturesGenerator:
         self.genuine_features = []
         self.generated_features = []
         self.context_sets = {}
-        self.init_context_sets()
         self.context_order = 3
         self.min_context_cardinality = 10
+        self.channels = {"hold" : "hold", "UD" : "UD", "DD" : "DD"}
 
+        self.init_context_sets()
+
+    def set_username(self, username: str):
+        self.username = username
 
     def init_context_sets(self):
         self.context_sets = {
@@ -20,7 +25,7 @@ class SyntheticFeaturesGenerator:
             "UD": {}
         }
 
-    def _split_k1_k2_from_body(self, body: str):
+    def split_k1_k2_from_body(self, body: str):
         if not isinstance(body, str) or body == "":
             return None, None
 
@@ -51,17 +56,13 @@ class SyntheticFeaturesGenerator:
                 hold_features.append((key, value))
 
             elif feature_name.startswith("DD."):
-                # parts = feature_name.split(".")
                 # DD.k1.k2 => key = k2
-                # key = parts[-1]
-                _, key = self._split_k1_k2_from_body(feature_name[3:])
+                _, key = self.split_k1_k2_from_body(feature_name[3:])
                 dd_flight_features.append((key, value))
 
             elif feature_name.startswith("UD."):
-                # parts = feature_name.split(".")
                 # UD.k1.k2 => key = k2
-                # key = parts[-1]
-                _, key = self._split_k1_k2_from_body(feature_name[3:])
+                _, key = self.split_k1_k2_from_body(feature_name[3:])
                 ud_flight_features.append((key, value))
 
         return hold_features, dd_flight_features, ud_flight_features
@@ -89,7 +90,7 @@ class SyntheticFeaturesGenerator:
         self._build_context_set(ud_flight_features, self.context_sets["UD"])
 
 
-    def FCM_sequence_Si(self, training_U, m, context_tuple, target_key):
+    def fcm_sequence_si(self, training_u, m, context_tuple, target_key):
         """
         training_U : [(key, t), ...]  chronological sequence across all training samples
         m          : context order (integer >= 0)
@@ -102,19 +103,19 @@ class SyntheticFeaturesGenerator:
         if m < 0:
             return S
 
-        n = len(training_U)
+        n = len(training_u)
         for idx in range(n):
             if idx < m:
                 continue
 
-            key_j, val_j = training_U[idx]
+            key_j, val_j = training_u[idx]
             if key_j != target_key:
                 continue
 
             if m == 0:
                 prev_context = tuple()
             else:
-                prev_context = tuple(training_U[idx - m + k][0] for k in range(m))
+                prev_context = tuple(training_u[idx - m + k][0] for k in range(m))
 
             if prev_context == context_tuple:
                 S.add(val_j)
@@ -174,7 +175,7 @@ class SyntheticFeaturesGenerator:
                     # slice: K[i-m : i] are the m preceding keys
                     context_tuple = tuple(K_sequence[i - m: i])
 
-                Si = self.FCM_sequence_Si(training_U, m, context_tuple, target_key)
+                Si = self.fcm_sequence_si(training_U, m, context_tuple, target_key)
 
                 if len(Si) < self.min_context_cardinality:
                     m = m - 1
@@ -213,7 +214,7 @@ class SyntheticFeaturesGenerator:
         """
         return stat.mean(Si)
 
-    def f_generating_func_icdf(self, Si):
+    def f_generating_func_icdf(self, Si: set[float]) -> float:
         """
         Sample a timing value from the inverse CDF of the empirical distribution in Si.
 
@@ -237,95 +238,135 @@ class SyntheticFeaturesGenerator:
         sampled_value = np.interp(u, cdf, sorted_values)
         return sampled_value
 
-    def generate_features_from_decisions(self, decisions, K_sequence, channel, generating_function="icdf"):
-        generate_values = []
+    def generate_features_from_decisions(self, decisions: list[dict], key_sequence: list[str], channel: str, generating_function: str = "icdf", repetitions: int = 1) -> list[tuple[str, float]]:
+        generated_value = 0
         for d in decisions:
-            feature_name = self.construct_feature_name(K_sequence=K_sequence, channel=channel, key_idx=d["index"])
-            if d["use_random_fallback"]:
-                generate_values.append((feature_name, random.uniform(0, 0.3)))
-            elif generating_function == "mean":
-                generate_values.append((feature_name, self.f_generating_func_mean(d["Si"])))
-            elif generating_function == "icdf":
-                generate_values.append((feature_name, self.f_generating_func_icdf(d["Si"])))
+            feature_name = self.construct_feature_name(key_sequence=key_sequence, channel=channel, key_idx=d["index"])
+            for rep in range(repetitions):
+                if d["use_random_fallback"]:
+                    generated_value = (feature_name, random.uniform(0, 0.3))
+                elif generating_function == "mean":
+                    generated_value = (feature_name, self.f_generating_func_mean(d["Si"]))
+                elif generating_function == "icdf":
+                    generated_value = (feature_name, self.f_generating_func_icdf(d["Si"]))
+                self.generated_features[rep].append(generated_value)
 
-        #print(generate_values)
-        return generate_values
-
-    def construct_feature_name(self, K_sequence, channel, key_idx):
+    def construct_feature_name(self, key_sequence: list[str], channel: str, key_idx: int) -> str:
         if channel == 'hold':
-            return "H." + K_sequence[key_idx]
+            return "H." + key_sequence[key_idx]
         elif channel == 'UD':
-            prev_key = K_sequence[key_idx - 1]
-            curr_key = K_sequence[key_idx]
+            prev_key = key_sequence[key_idx - 1]
+            curr_key = key_sequence[key_idx]
             return f"UD.{prev_key}.{curr_key}"
         elif channel == 'DD':
-            prev_key = K_sequence[key_idx - 1]
-            curr_key = K_sequence[key_idx]
+            prev_key = key_sequence[key_idx - 1]
+            curr_key = key_sequence[key_idx]
             return f"DD.{prev_key}.{curr_key}"
         return ""
 
 
-    def generate(self):
+    def generate(self, hold_features: list[tuple[str, float]] = None, dd_features: list[tuple[str, float]] = None, ud_features: list[tuple[str, float]] = None, repetitions: int = 1) -> list[list[tuple[str, float]]]:
         # self.build_context_sets()
-        hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
-        K_sequence = [".","t", "i", "e", "5", "Shift.r", "o", "a", "n", "l"]
-        channel_hold='hold'
-        decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order, channel=channel_hold)
-        self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold, generating_function="icdf"))
-        #print(decisions_hold)
-        channel_dd='DD'
-        decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_dd)
-        self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd,generating_function="icdf"))
 
-        channel_ud= 'UD'
-        decisions_ud = self.select_contexts_for_sequence(ud_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_ud)
-        self.generated_features.extend(self.generate_features_from_decisions(decisions_ud, K_sequence=K_sequence, channel=channel_ud, generating_function="icdf"))
+        if hold_features is None or dd_features is None or ud_features is None:
+            hold_features, dd_features, ud_features = self.split_genuine_features()
 
-        ordered_features = self.order_generated_features(K_sequence=K_sequence)
+        # print("FEATURE SPLIT SUCCESSFULLY")
 
-        #print("Generated features:")
+        self.generated_features = [[] for _ in range(repetitions)]
+
+        key_sequence = self.create_key_sequence()
+
+        decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=key_sequence,
+                                                            M=self.context_order, channel=self.channels["hold"])
+
+        # print("HOLD CONTEXT SETS CREATED SUCCESSFULLY")
+        decisions_dd = self.select_contexts_for_sequence(dd_features, K_sequence=key_sequence,
+                                                            M=self.context_order, channel=self.channels["DD"])
+        # print("DD CONTEXT SETS CREATED SUCCESSFULLY")
+
+        decisions_ud = self.select_contexts_for_sequence(ud_features, K_sequence=key_sequence,
+                                                            M=self.context_order, channel=self.channels["UD"])
+
+        # print("UD CONTEXT SETS CREATED SUCCESSFULLY")
+
+        self.generate_features_from_decisions(decisions_hold, key_sequence=key_sequence,
+                                              channel=self.channels["hold"],generating_function="icdf",
+                                              repetitions=repetitions)
+
+        # print("HOLD FEATURES GENERATED SUCCESSFULLY")
+        self.generate_features_from_decisions(decisions_dd, key_sequence=key_sequence,
+                                              channel=self.channels["DD"], generating_function="icdf",
+                                              repetitions=repetitions)
+
+        # print("DD FEATURES GENERATED SUCCESSFULLY")
+        self.generate_features_from_decisions(decisions_ud, key_sequence=key_sequence,
+                                              channel=self.channels["UD"], generating_function="icdf",
+                                              repetitions=repetitions)
+
+        # print("UD FEATURES GENERATED SUCCESSFULLY")
+
+        # print("DECISIONS FOR HOLD KEY SEQUENCE: ")
+        # print(decisions_hold)
+
+        self.order_generated_features(key_sequence=key_sequence, repetitions=repetitions)
+
+        #print("Generated features in feature generator final:")
         #print(self.generated_features)
 
-        return dict(ordered_features)
+        return self.generated_features
 
-    def order_generated_features(self, K_sequence):
+    def create_key_sequence(self):
+        key_sequence = []
+        password = constants.PASSWORD
+        for symbol in password:
+            key_sequence.append(symbol)
+        return key_sequence
+
+    def order_generated_features(self, key_sequence: list[str], repetitions: int = 1):
         """
         Reorders features so that for each key in K_sequence:
           H.key, DD.prev.curr, UD.prev.curr
         are grouped together.
         """
-        hold_dict = {name: val for name, val in self.generated_features if name.startswith("H.")}
-        dd_dict = {name: val for name, val in self.generated_features if name.startswith("DD.")}
-        ud_dict = {name: val for name, val in self.generated_features if name.startswith("UD.")}
+        for rep in range(repetitions):
+            hold_dict = {name: val for name, val in self.generated_features[rep] if name.startswith("H.")}
+            dd_dict = {name: val for name, val in self.generated_features[rep]  if name.startswith("DD.")}
+            ud_dict = {name: val for name, val in self.generated_features[rep]  if name.startswith("UD.")}
 
-        ordered_features = []
+            ordered_features = []
 
-        for idx, curr_key in enumerate(K_sequence):
-            hold_name = f"H.{curr_key}"
-            if hold_name in hold_dict:
-                ordered_features.append((hold_name, hold_dict[hold_name]))
+            for idx, curr_key in enumerate(key_sequence):
+                if idx == 0:
+                    hold_name = f"H.{curr_key}"
+                    if hold_name in hold_dict:
+                        ordered_features.append((hold_name, hold_dict[hold_name]))
 
-            if idx > 0:
-                prev_key = K_sequence[idx - 1]
-                dd_name = f"DD.{prev_key}.{curr_key}"
-                if dd_name in dd_dict:
-                    ordered_features.append((dd_name, dd_dict[dd_name]))
+                if idx > 0:
+                    prev_key = key_sequence[idx - 1]
+                    dd_name = f"DD.{prev_key}.{curr_key}"
+                    if dd_name in dd_dict:
+                        ordered_features.append((dd_name, dd_dict[dd_name]))
 
-            if idx > 0:
-                prev_key = K_sequence[idx - 1]
-                ud_name = f"UD.{prev_key}.{curr_key}"
-                if ud_name in ud_dict:
-                    ordered_features.append((ud_name, ud_dict[ud_name]))
-        #print("Ordered features: ")
-        #print(ordered_features)
-        return ordered_features
+                    prev_key = key_sequence[idx - 1]
+                    ud_name = f"UD.{prev_key}.{curr_key}"
+                    if ud_name in ud_dict:
+                        ordered_features.append((ud_name, ud_dict[ud_name]))
+
+                    hold_name = f"H.{curr_key}"
+                    if hold_name in hold_dict:
+                        ordered_features.append((hold_name, hold_dict[hold_name]))
+
+            self.generated_features[rep] = ordered_features
+            # print(f"ORDERED FEATURES FOR ROW {rep}:")
+            # print(ordered_features)
+
 
 
     def clear_data(self):
         self.genuine_features = []
         self.generated_features = []
         self.init_context_sets()
-        self.features_folder_path = ""
 
 
 

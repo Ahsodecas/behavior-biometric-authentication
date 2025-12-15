@@ -16,12 +16,8 @@ class CMUDatasetTriplet(Dataset):
 
         cols = list(self.df.columns)
         feat_start = cols.index("generated") + 1 if "generated" in cols else 4
-        print(f"feat_start: {feat_start}")
         self.meta_cols = cols[:feat_start]
         self.feature_cols = cols[feat_start:]
-        print(f"df.columns): {len(self.df.columns)}")
-        print(f"feature_cols: {len(self.feature_cols)}")
-        print(f"meta_cols: {len(self.meta_cols)}")
 
         self.df["subject"] = self.df["subject"].astype(str)
 

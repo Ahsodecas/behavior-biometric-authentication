@@ -28,6 +28,9 @@ class DataCollector:
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
 
+    def set_username(self, username: str):
+        self.username = username
+
     def start_session(self):
         """Initialize a new data collection session."""
         self.data = []

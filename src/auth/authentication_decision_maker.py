@@ -7,6 +7,7 @@ from src.ml.snn_model import TripletSNN
 from src.ml.triplet_dataset import CMUDatasetTriplet
 import pandas as pd
 
+import src.constants as constants
 
 class AuthenticationDecisionMaker:
     """
@@ -15,8 +16,8 @@ class AuthenticationDecisionMaker:
     The GUI should only call authenticator.authenticate().
     """
 
-    def __init__(self, password_fixed=".tie5Roanl", threshold=0.4):
-        self.password_fixed = password_fixed
+    def __init__(self, username=None, threshold=0.4):
+        self.username = username
         self.threshold = threshold
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -28,7 +29,7 @@ class AuthenticationDecisionMaker:
     # ---------------------------------------------------------
     # ------------ LOAD MODEL + SCALER + REF SAMPLE ----------
     # ---------------------------------------------------------
-    def load_model(self, ckpt_path):
+    def load_model(self, ckpt_path, username, training_csv):
         # -------------------------------
         # Checkpoint file must exist
         # -------------------------------
@@ -40,16 +41,13 @@ class AuthenticationDecisionMaker:
         #   - scaler
         #   - feature columns
         # -------------------------------
-        training_csv = "datasets/ksenia_training.csv"
-
-        if not os.path.exists(training_csv):
+        training_csv_path = os.path.join(constants.PATH_DATASETS, training_csv)
+        if not os.path.exists(training_csv_path):
             raise FileNotFoundError(f"Training CSV not found: {training_csv}")
 
-        tmp_dataset = CMUDatasetTriplet(training_csv)
+        tmp_dataset = CMUDatasetTriplet(training_csv_path)
+
         input_dim = tmp_dataset.X.shape[1]
-        print(f"X: {tmp_dataset.X.shape}")
-        print(f"Input dimension: {input_dim}")
-        print(f"feature_cols: {tmp_dataset.feature_cols}")
 
         self.scaler = tmp_dataset.scaler
         self.feature_cols = tmp_dataset.feature_cols
@@ -58,14 +56,15 @@ class AuthenticationDecisionMaker:
         # Load CSV again (unscaled) so we
         # can filter by subject/generated
         # -------------------------------
-        df = pd.read_csv(training_csv)
+
+        df = pd.read_csv(training_csv_path)
 
         # Filter reference samples:
-        ref_df = df[(df["subject"] == "ksenia") & (df["generated"] == 0)]
+        ref_df = df[(df["subject"] == username) & (df["generated"] == 0)]
 
         if ref_df.empty:
             raise ValueError(
-                "No reference samples found: need rows where subject='ksenia' and generated=0."
+                f"No reference samples found: need rows where subject='{username}' and generated=0."
             )
 
         # -------------------------------
@@ -86,8 +85,8 @@ class AuthenticationDecisionMaker:
         # Compute reference sample as mean vector
         self.ref_sample = ref_matrix_norm.mean(axis=0).astype(np.float32)
 
-        print("Reference sample computed from real Ksenia samples.")
-        print(self.ref_sample)
+        #print("Reference sample computed from real Ksenia samples.")
+        #print(self.ref_sample)
 
         # -------------------------------
         # Load Triplet network
@@ -139,7 +138,7 @@ class AuthenticationDecisionMaker:
         """
 
         # password check
-        if password != self.password_fixed:
+        if password != constants.PASSWORD:
             return False, float("inf"), "Incorrect password."
 
         # Ensure model loaded
