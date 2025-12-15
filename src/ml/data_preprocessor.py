@@ -67,7 +67,7 @@ class DataPreprocessor:
             print(f"[ERROR] Synthetic generation failed: {e}")
             return pd.DataFrame()
 
-        synth_df = self.load_csv(synthetic_file)
+        synth_df = self.load_csv(synthetic_file_path)
         return synth_df if synth_df is not None else pd.DataFrame()
 
     # -------------------------------------------------------
