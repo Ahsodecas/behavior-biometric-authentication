@@ -27,7 +27,6 @@ def test_auth_model_not_loaded(auth: AuthenticationDecisionMaker):
 
     success, dist, msg = auth.authenticate(
         username="user",
-        password=".tie5Roanl",
         feature_dict={}
     )
 

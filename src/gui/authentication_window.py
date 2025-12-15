@@ -56,7 +56,7 @@ class AuthenticationWindow(QWidget):
 
             # ---------------- Core helpers ----------------
             self.data_utility = DataUtility()
-            self.authenticator = AuthenticationDecisionMaker(threshold=0.3)
+            self.authenticator = AuthenticationDecisionMaker(threshold=0.1)
 
             # UI setup
             self.setup_layout()
