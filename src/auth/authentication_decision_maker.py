@@ -50,15 +50,11 @@ class AuthenticationDecisionMaker:
         input_dim = tmp_dataset.X.shape[1]
 
         self.scaler = tmp_dataset.scaler
-
         self.feature_cols = tmp_dataset.feature_cols
 
         # -------------------------------
-
         # Load CSV again (unscaled) so we
-
         # can filter by subject/generated
-
         # -------------------------------
 
         df = pd.read_csv(training_csv_path)
@@ -142,7 +138,7 @@ class AuthenticationDecisionMaker:
         """
 
         # password check
-        if password != constants.PASSWORD:
+        if password != self.password_fixed:
             return False, float("inf"), "Incorrect password."
 
         # Ensure model loaded

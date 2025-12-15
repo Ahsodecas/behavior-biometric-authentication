@@ -55,9 +55,9 @@ class DataUtility:
                             "rep": i}
 
             self.feature_extractor_imposter_users.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
-            # print("GENERATED FEATURES in FEATURE EXTRACTOR:")
-            # print(self.feature_extractor_imposter_users.key_features.features)
-            self.feature_extractor_imposter_users.save_key_features_csv(filename, append=True)
+            #print("GENERATED FEATURES in FEATURE EXTRACTOR:")
+            #print(self.feature_extractor_imposter_users.key_features.features)
+            self.feature_extractor_imposter_users.save_key_features_csv(filename=filename, append=True)
 
     def save_generated_features_csv(self, generated_features: list[list[tuple[str, float]]], filename: str, append: bool = True, repetitions: int = 1):
 

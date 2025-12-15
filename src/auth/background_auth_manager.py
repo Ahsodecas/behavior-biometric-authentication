@@ -1,16 +1,15 @@
 # src/utils/background_auth_manager.py
 
 import os
-import csv
 import time
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from threading import Thread, Event
-import torch
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+from threading import Event, Thread
+from PyQt5.QtCore import QObject, pyqtSignal
 
 from src.utils.data_utility import DataUtility
+from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 
 
 class BackgroundAuthManager(QObject):
@@ -39,6 +38,10 @@ class BackgroundAuthManager(QObject):
         self.data_utility = data_utility
         self.authenticator_model_path = authenticator_model_path
 
+        # Core utilities
+        self.data_utility = DataUtility(username=username)
+
+        # Thread control
         self._stop_event = Event()
         self._thread = None
 
@@ -58,6 +61,7 @@ class BackgroundAuthManager(QObject):
         self._thread.start()
 
     def stop(self):
+        self.timer.stop()
         self._stop_event.set()
         self.data_utility.stop_background_collection()
         self.status_update.emit("● Idle")
@@ -65,7 +69,7 @@ class BackgroundAuthManager(QObject):
     # =========================
     # Collection + Authentication
     # =========================
-    def _collect_data_for_duration(self, duration_minutes=3):
+    def _collect_data_for_duration(self, duration_minutes=0.5):
         if self._stop_event.is_set():
             return
 

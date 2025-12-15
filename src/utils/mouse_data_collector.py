@@ -13,7 +13,7 @@ PATH_COLLECTED = os.path.join(PROJECT_ROOT, "collected_data")
 
 class MouseDataCollector:
     def __init__(self, username=None):
-        self.events = []  # stores all events in order
+        self.events = []
         self.running = False
         self.thread = None
         self.username = username or "unknown_user"

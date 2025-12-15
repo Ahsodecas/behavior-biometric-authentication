@@ -275,7 +275,7 @@ class SyntheticFeaturesGenerator:
 
         self.generated_features = [[] for _ in range(repetitions)]
 
-        key_sequence = self.create_key_sequence()
+        key_sequence = [".","t", "i", "e", "5", "Shift.r", "o", "a", "n", "l"]
 
         decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["hold"])
@@ -354,20 +354,44 @@ class SyntheticFeaturesGenerator:
             # print(f"ORDERED FEATURES FOR ROW {rep}:")
             # print(ordered_features)
 
-    def create_key_sequence(self):
-        key_sequence = []
-        password = constants.PASSWORD
 
-        for symbol in password:
-            key_sequence.append(symbol)
-
-        return key_sequence
 
     def clear_data(self):
         self.genuine_features = []
         self.generated_features = []
         self.init_context_sets()
 
+
+    # def generate_other_users(self, hold_features, dd_flight_features, ud_flight_features):
+    #     # self.build_context_sets()
+    #     #hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
+    #     # K_sequence = [".","a", "h", "s", "o", "Shift.d", "e", "c", "a", "s"]
+    #     K_sequence = [".", "a", "h", "s", "o", "d", "e", "c", "a", "s"]
+    #     channel_hold = 'hold'
+    #     decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=K_sequence, M=self.context_order,channel=channel_hold)
+    #     self.generated_features.extend(self.generate_features_from_decisions(decisions_hold, K_sequence=K_sequence, channel=channel_hold,generating_function="icdf"))
+    #     print("DECISIONS FOR HOLD KEY SEQUENCE: ")
+    #     print(decisions_hold)
+    #     # print("COUNT OF DECISIONS FOR DOT: ")
+    #     # dot_decision_count = next(len(d["Si"]) for d in decisions_hold if d["key"] == ".")
+    #     # print(dot_decision_count)
+    #     # print("COUNT OF DECISIONS FOR A: ")
+    #     # a_decision_count = next(len(d["Si"]) for d in decisions_hold if d["key"] == "a")
+    #     # print(a_decision_count)
+    #     channel_dd = 'DD'
+    #     decisions_dd = self.select_contexts_for_sequence(dd_flight_features, K_sequence=K_sequence,M=self.context_order, channel=channel_dd)
+    #     self.generated_features.extend(self.generate_features_from_decisions(decisions_dd, K_sequence=K_sequence, channel=channel_dd, generating_function="icdf"))
+    #
+    #     channel_ud = 'UD'
+    #     decisions_ud = self.select_contexts_for_sequence(ud_flight_features, K_sequence=K_sequence, M=self.context_order, channel=channel_ud)
+    #     self.generated_features.extend(self.generate_features_from_decisions(decisions_ud, K_sequence=K_sequence, channel=channel_ud, generating_function="icdf"))
+    #
+    #     ordered_features = self.order_generated_features(K_sequence=K_sequence)
+    #
+    #     print("Generated features in feature generator final:")
+    #     print(self.generated_features)
+    #
+    #     return dict(ordered_features)
 
 
 
