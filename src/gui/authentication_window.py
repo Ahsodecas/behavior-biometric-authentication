@@ -13,7 +13,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
-    QHBoxLayout, QFrame
+    QHBoxLayout, QFrame, QSizePolicy
 )
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
@@ -172,81 +172,69 @@ class AuthenticationWindow(QWidget):
             print(f"handle_login error: {e}")
 
     def setup_set_password_page(self):
-        self.clear_layout()
-        self.resize(700, 450)
-        self.center_on_screen()
+        try:
+            self.clear_layout()
+            self.resize(700, 450)
+            self.center_on_screen()
 
-        card = self.make_card()
-        card.setMinimumHeight(360)
+            card = self.make_card()
+            card.setMinimumWidth(520)
+            #card.setMinimumHeight(320)
 
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(40, 40, 40, 40)
-        card_layout.setSpacing(24)
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(30, 30, 30, 30)
+            layout.setSpacing(16)
 
-        # ── Title ─────────────────────────────
-        title = QLabel("Set Your Password")
-        title.setProperty("class", "title")
-        title.setAlignment(Qt.AlignCenter)
-        card_layout.addWidget(title)
+            # Title
+            title = QLabel("Set Your Password")
+            title.setProperty("class", "title")
+            title.setAlignment(Qt.AlignCenter)
+            layout.addWidget(title)
 
-        instr = QLabel(
-            "This password will be used for enrollment\nand future authentication."
-        )
-        instr.setProperty("class", "instr")
-        instr.setAlignment(Qt.AlignCenter)
-        card_layout.addWidget(instr)
+            # Subtitle
+            subtitle = QLabel("Create a password for your new account")
+            subtitle.setProperty("class", "instr")
+            subtitle.setAlignment(Qt.AlignCenter)
+            layout.addWidget(subtitle)
 
-        card_layout.addSpacing(10)
+            # New password field
+            self.new_password_entry = QLineEdit()
+            self.new_password_entry.setEchoMode(QLineEdit.Password)
+            self.new_password_entry.setPlaceholderText("Enter new password")
+            layout.addWidget(self.new_password_entry)
 
-        # ── Password row ──────────────────────
-        pwd_row = QHBoxLayout()
-        pwd_row.setSpacing(12)
+            # Confirm password field
+            self.confirm_password_entry = QLineEdit()
+            self.confirm_password_entry.setEchoMode(QLineEdit.Password)
+            self.confirm_password_entry.setPlaceholderText("Confirm password")
+            layout.addWidget(self.confirm_password_entry)
 
-        pwd_label = QLabel("Password:")
-        pwd_label.setProperty("class", "field-label")
-        pwd_row.addWidget(pwd_label, alignment=Qt.AlignVCenter)
+            # Buttons row
+            btn_row = QHBoxLayout()
+            btn_row.setSpacing(16)
 
-        self.new_password_entry = QLineEdit()
-        self.new_password_entry.setEchoMode(QLineEdit.Password)
-        self.new_password_entry.setPlaceholderText("Enter a password")
-        pwd_row.addWidget(self.new_password_entry)
+            save_btn = QPushButton("Save Password")
+            save_btn.setProperty("class", "primary")
+            save_btn.clicked.connect(self.save_password_and_continue)
 
-        card_layout.addLayout(pwd_row)
+            cancel_btn = QPushButton("Cancel")
+            cancel_btn.setProperty("class", "secondary")
+            cancel_btn.clicked.connect(self.setup_landing_page)
 
-        # ── Confirm password row ──────────────
-        confirm_row = QHBoxLayout()
-        confirm_row.setSpacing(12)
+            btn_row.addStretch()
+            btn_row.addWidget(save_btn)
+            btn_row.addWidget(cancel_btn)
+            btn_row.addStretch()
 
-        confirm_label = QLabel("Confirm:")
-        confirm_label.setProperty("class", "field-label")
-        confirm_row.addWidget(confirm_label, alignment=Qt.AlignVCenter)
+            layout.addLayout(btn_row)
 
-        self.confirm_password_entry = QLineEdit()
-        self.confirm_password_entry.setEchoMode(QLineEdit.Password)
-        self.confirm_password_entry.setPlaceholderText("Confirm password")
-        confirm_row.addWidget(self.confirm_password_entry)
+            # Add card to main layout
+            self.layout.addStretch()
+            self.layout.addWidget(card, alignment=Qt.AlignCenter)
+            self.layout.addStretch()
 
-        card_layout.addLayout(confirm_row)
-
-        card_layout.addSpacing(20)
-
-        # ── Button row ────────────────────────
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-
-        btn = QPushButton("Continue to Enrollment")
-        btn.setProperty("class", "primary")
-        btn.setMinimumWidth(220)
-        btn.clicked.connect(self.save_password_and_continue)
-        btn_row.addWidget(btn)
-
-        btn_row.addStretch()
-        card_layout.addLayout(btn_row)
-
-        # ── Mount card ────────────────────────
-        self.layout.addStretch()
-        self.layout.addWidget(card, alignment=Qt.AlignCenter)
-        self.layout.addStretch()
+        except Exception as e:
+            QMessageBox.critical(self, "Password Setup Error", str(e))
 
     def save_password_and_continue(self):
         pwd1 = self.new_password_entry.text()
