@@ -57,7 +57,7 @@ class AuthenticationDecisionMaker:
 
         if ref_df.empty:
             raise ValueError(
-                "No reference samples found: need rows where subject='ksenia' and generated=0."
+                f"No reference samples found: need rows where subject='{username}' and generated=0."
             )
 
         # -------------------------------
