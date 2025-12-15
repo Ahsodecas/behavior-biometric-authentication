@@ -310,8 +310,8 @@ class SyntheticFeaturesGenerator:
 
         self.order_generated_features(key_sequence=key_sequence, repetitions=repetitions)
 
-        print("Generated features in feature generator final:")
-        print(self.generated_features)
+        #print("Generated features in feature generator final:")
+        #print(self.generated_features)
 
         return self.generated_features
 

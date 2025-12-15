@@ -19,7 +19,6 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
 from numpy.f2py.crackfortran import usermodules
 
-from datasets.test import TripletSNN, CMUDatasetTriplet, embed_all
 from sklearn.preprocessing import StandardScaler
 
 from src.ml.data_preprocessor import DataPreprocessor
@@ -36,12 +35,6 @@ from src.ml.model_trainer import ModelTrainer
 
 import src.gui.constants as constants
 
-
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(os.path.dirname(ROOT_DIR))
-PATH_MODELS = os.path.join(PROJECT_ROOT, "models")
-PATH_DATASETS = os.path.join(PROJECT_ROOT, "datasets")
-PATH_EXTRACTED = os.path.join(PROJECT_ROOT, "extracted_features")
 
 
 # =====================================================================
@@ -139,38 +132,46 @@ class AuthenticationWindow(QWidget):
         self.layout.addStretch()
 
     def handle_register(self):
-        username = self.username_entry.text().strip()
-        if not username:
-            QMessageBox.warning(self, "Register", "Please enter a username")
-            return
+        try:
+            username = self.username_entry.text().strip()
+            if not username:
+                QMessageBox.warning(self, "Register", "Please enter a username")
+                return
 
-        self.username = username
-        self.authenticator.username = self.username
-        self.enroll_count = 0
-        self.mode = "enrollment"
-        self.setup_enrollment_mode()
+            self.username = username
+            self.authenticator.username = self.username
+            self.enroll_count = 0
+            self.mode = "enrollment"
+            self.setup_enrollment_mode()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"An error occurred during registration:\n{str(e)}")
+            print(f"handle_register error: {e}")
 
     def handle_login(self):
-        username = self.username_entry.text().strip()
-        if not username:
-            QMessageBox.warning(self, "Login", "Please enter a username")
-            return
+        try:
+            username = self.username_entry.text().strip()
+            if not username:
+                QMessageBox.warning(self, "Login", "Please enter a username")
+                return
 
-        model_path = os.path.join(PATH_MODELS, f"{username}_snn.pt")
-        if not os.path.exists(model_path):
-            QMessageBox.information(
-                self,
-                "No Model",
-                "No trained model found. Please register first."
-            )
-            return
+            model_path = os.path.join(constants.PATH_MODELS, f"{username}_snn.pt")
+            if not os.path.exists(model_path):
+                QMessageBox.information(
+                    self,
+                    "No Model",
+                    "No trained model found. Please register first."
+                )
+                return
 
-        self.username = username
-        self.authenticator.username = username
-        self.mode = "authentication"
-        self.authenticator.load_model(model_path)
-        self.setup_authentication_mode()
-
+            self.username = username
+            self.authenticator.username = username
+            self.data_utility.set_username(username)
+            self.mode = "authentication"
+            self.authenticator.load_model(model_path, username=username, training_csv=f"datasets/{username}_training.csv")
+            self.setup_authentication_mode()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"An error occurred during login:\n{str(e)}")
+            print(f"handle_login error: {e}")
 
     # =================================================================
     #  ENROLLMENT MODE
@@ -205,7 +206,8 @@ class AuthenticationWindow(QWidget):
 
     def submit_enrollment_sample(self):
         password = self.password_entry.text()
-
+        username = self.username_entry.text()
+        try:
             # Validation
             if not username:
                 QMessageBox.warning(self, "Enrollment", "Enter a username.")
@@ -219,6 +221,7 @@ class AuthenticationWindow(QWidget):
                 self.data_utility.reset()
                 return
 
+            self.data_utility.set_username(username)
             # Feature extraction
             self.data_utility.extract_features(username)
             filename = "enrollment_features.csv"
@@ -337,13 +340,13 @@ class AuthenticationWindow(QWidget):
 
             preprocessor = DataPreprocessor(
                 enrollment_csv=os.path.join(constants.PATH_EXTRACTED, username, "enrollment_features.csv"),
-                dsl_dataset_csv=os.path.join(constants.PATH_DATASETS, "DSL-StrongPasswordData.csv"),
                 username=username,
                 output_csv=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv")
             )
 
             trainer = ModelTrainer(
                 csv_path=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv"),
+                username=username,
                 out_dir=constants.PATH_MODELS,
                 batch_size=64,
                 lr=1e-3
@@ -457,8 +460,7 @@ class AuthenticationWindow(QWidget):
 
             try:
                 self.username = username
-                self.data_utility.username = username
-                self.data_utility.mouse_data_collector.username = username
+                self.data_utility.set_username(username)
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_raw_csv(filename="raw.csv")
@@ -517,7 +519,7 @@ class AuthenticationWindow(QWidget):
             elif text == "Authentication":
                 self.mode = "authentication"
                 try:
-                    self.authenticator.load_model(os.path.join(PATH_MODELS, f"{self.username}_snn.pt"))
+                    self.authenticator.load_model(os.path.join(constants.PATH_MODELS, f"{self.username}_snn.pt"), username=self.username, training_csv=f"datasets/{self.username}_training.csv")
                 except Exception as e:
                     QMessageBox.critical(self, "Model load failed", str(e))
                     return
@@ -528,7 +530,9 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Mode Change Error", str(e))
 
-
+    # =================================================================
+    #  BACKGROUND CONTINUOUS AUTHENTICATION
+    # =================================================================
     def switch_to_background_mode(self):
         # ---- UI setup errors ----
         try:
@@ -536,15 +540,22 @@ class AuthenticationWindow(QWidget):
                 self.close_background_mode()
 
             self.bg_window = QWidget()
-            self.bg_window.setObjectName("bg-card")
+            self.bg_window.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool)
+            self.bg_window.setAttribute(Qt.WA_TranslucentBackground)
             self.bg_window.setFixedSize(280, 180)
-            self.bg_window.setWindowFlags(
-                Qt.WindowStaysOnTopHint |
-                Qt.FramelessWindowHint |
-                Qt.Tool
-            )
 
-            layout = QVBoxLayout(self.bg_window)
+            # Add a QFrame for the visible rounded rectangle
+            card = QFrame(self.bg_window)
+            card.setObjectName("bg-card-frame")
+            card.setGeometry(0, 0, 280, 180)
+            card.setStyleSheet("""
+                QFrame#bg-card-frame {
+                    background-color: #ffffff;
+                    border-radius: 20px;
+                }
+            """)
+
+            layout = QVBoxLayout(card)
             layout.setContentsMargins(16, 16, 16, 16)
             layout.setSpacing(10)
 
@@ -583,8 +594,8 @@ class AuthenticationWindow(QWidget):
 
             screen = QApplication.primaryScreen().availableGeometry()
             self.bg_window.move(
-                screen.right() - self.bg_window.width() - 20,
-                screen.bottom() - self.bg_window.height() - 20
+                screen.x() + screen.width() - self.bg_window.width() - 20,
+                screen.y() + screen.height() - self.bg_window.height() - 20
             )
 
             self.bg_window.show()
@@ -602,7 +613,7 @@ class AuthenticationWindow(QWidget):
                 username=self.username,
                 data_utility=self.data_utility,
                 authenticator_model_path=os.path.join(
-                    PATH_MODELS, f"{self.username}_cnn_mouse.keras"
+                    constants.PATH_MODELS, f"{self.username}_cnn_mouse.keras"
                 ),
             )
 
