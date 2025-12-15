@@ -60,6 +60,8 @@ class DataPreprocessor:
         except Exception as e:
             print(f"[WARNING] Failed to delete old synthetic file '{synthetic_file_path}': {e}")
 
+        print("[INFO] synthetic file path: " + synthetic_file_path)
+
         self.username = self.data_utility.load_csv_key_features(self.enrollment_csv)
 
         # Generate synthetic rows
@@ -72,7 +74,7 @@ class DataPreprocessor:
             print(f"[ERROR] Synthetic generation failed: {e}")
             return pd.DataFrame()
 
-        synth_df = self.load_csv(synthetic_file)
+        synth_df = self.load_csv(synthetic_file_path)
         return synth_df if synth_df is not None else pd.DataFrame()
 
     # -------------------------------------------------------
@@ -100,21 +102,19 @@ class DataPreprocessor:
                 print("[FATAL] No enrollment dataset. Cannot proceed.")
                 return None
             print("[DataProcessor] Generating synthetic samples via DataUtility...")
-            synth_df = self.generate_synthetic(self.enrollment_csv)
+            synth_df = self.generate_synthetic()
             if synth_df is None:
                 synth_df = pd.DataFrame()
 
             print("[DataProcessor] Loading Imposter dataset dataset...")
             generated_imposter_csv = "generated_imposter_data.csv"
+            print("[DataPreprocessor] Generating imposter samples...")
             self.data_utility.generate_synthetic_features_imposter_users(
                 filename=generated_imposter_csv, repetitions=self.synth_reps)
             dsl_df = self.load_csv(os.path.join(constants.PATH_EXTRACTED, f"{self.username}\\{generated_imposter_csv}"))
             if dsl_df is None:
                 print("[FATAL] Imposter dataset missing. Cannot build training CSV.")
                 return None
-
-            print("[DataPreprocessor] Generating imposter samples...")
-            dsl_df = self.generate_imposter_synthetic()
 
             print("[DataPreprocessor] Combining datasets...")
             try:

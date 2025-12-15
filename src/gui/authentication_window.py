@@ -160,7 +160,7 @@ class AuthenticationWindow(QWidget):
             self.authenticator.username = username
             self.data_utility.set_username(username)
             self.mode = "authentication"
-            self.authenticator.load_model(model_path, username=username, training_csv=f"datasets/{username}_training.csv")
+            self.authenticator.load_model(model_path, username=username, training_csv=f"{self.username}_training.csv")
             self.setup_authentication_mode()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred during login:\n{str(e)}")
