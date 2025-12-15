@@ -98,6 +98,7 @@ def test_one_time_authentication_pipeline(tmp_path):
     sample_features = df.iloc[0].to_dict()
 
     success, dist, message = authenticator.authenticate(username, password, sample_features)
+    dist = float(dist)
 
     # ----------------------------------------------------------------
     # Step 6: Assert authentication outputs
