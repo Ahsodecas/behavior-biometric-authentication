@@ -29,7 +29,7 @@ class AuthenticationDecisionMaker:
     # ---------------------------------------------------------
     # ------------ LOAD MODEL + SCALER + REF SAMPLE ----------
     # ---------------------------------------------------------
-    def load_model(self, ckpt_path):
+    def load_model(self, ckpt_path, username, training_csv):
         # -------------------------------
         # Checkpoint file must exist
         # -------------------------------
@@ -41,25 +41,30 @@ class AuthenticationDecisionMaker:
         #   - scaler
         #   - feature columns
         # -------------------------------
-        training_csv = f"datasets/{self.username}_training.csv"
-
-        if not os.path.exists(training_csv):
+        training_csv_path = os.path.join(constants.PATH_DATASETS, training_csv)
+        if not os.path.exists(training_csv_path):
             raise FileNotFoundError(f"Training CSV not found: {training_csv}")
 
-        tmp_dataset = CMUDatasetTriplet(training_csv)
+        tmp_dataset = CMUDatasetTriplet(training_csv_path)
+
         input_dim = tmp_dataset.X.shape[1]
 
         self.scaler = tmp_dataset.scaler
+
         self.feature_cols = tmp_dataset.feature_cols
 
         # -------------------------------
+
         # Load CSV again (unscaled) so we
+
         # can filter by subject/generated
+
         # -------------------------------
-        df = pd.read_csv(training_csv)
+
+        df = pd.read_csv(training_csv_path)
 
         # Filter reference samples:
-        ref_df = df[(df["subject"] == "ksenia") & (df["generated"] == 0)]
+        ref_df = df[(df["subject"] == username) & (df["generated"] == 0)]
 
         if ref_df.empty:
             raise ValueError(

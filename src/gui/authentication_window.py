@@ -4,7 +4,6 @@
 
 import os
 
-from Demos.win32cred_demo import username
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
@@ -151,7 +150,10 @@ class AuthenticationWindow(QWidget):
         self.username = username
         self.authenticator.username = username
         self.mode = "authentication"
-        self.authenticator.load_model(model_path)
+        self.data_utility.set_username(username)
+
+        self.authenticator.load_model(model_path, username=username, training_csv=f"{username}_training.csv")
+
         self.setup_authentication_mode()
 
 
@@ -227,10 +229,6 @@ class AuthenticationWindow(QWidget):
         if not os.path.exists(file_path):
             QMessageBox.warning(self, "Load CSV", "Selected file does not exist.")
             return
-
-        metadata = {}
-        features = {}
-        username = ""
 
         try:
             self.username = self.data_utility.load_csv_key_features(file_path)
@@ -309,8 +307,7 @@ class AuthenticationWindow(QWidget):
             preprocessor = DataPreprocessor(
                 enrollment_csv=os.path.join(constants.PATH_EXTRACTED, username, "enrollment_features.csv"),
                 username=username,
-                output_csv=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv"),
-                synth_reps = 200
+                output_csv=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv")
             )
 
             trainer = ModelTrainer(
@@ -490,7 +487,9 @@ class AuthenticationWindow(QWidget):
             elif text == "Authentication":
                 self.mode = "authentication"
                 try:
-                    self.authenticator.load_model(constants.MODEL_PATH)
+                    self.authenticator.load_model(os.path.join(constants.PATH_MODELS, f"{self.username}_snn.pt"),
+                                                  username=self.username,
+                                                  training_csv=f"{self.username}_training.csv")
                 except Exception as e:
                     QMessageBox.critical(self, "Model load failed", str(e))
                     return
