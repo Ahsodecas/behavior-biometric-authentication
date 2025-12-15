@@ -106,7 +106,7 @@ class ExtractedFeatures:
                         try:
                             if key == "subject":
                                 username = str(val)
-                                print("READ USERNAME IS " + username)
+                                # print("READ USERNAME IS " + username)
                             else:
                                 val = int(val)
                         except Exception:

@@ -67,7 +67,7 @@ class FeatureExtractor:
 
     def set_username(self, username: str):
         self.username = username
-        print(f"USERNAME IN FEATURE EXTRACTOR SET {username}")
+        # print(f"USERNAME IN FEATURE EXTRACTOR SET {username}")
 
     def extract_key_features(self):
         """
@@ -88,9 +88,9 @@ class FeatureExtractor:
             })
 
         # --- build token list from password (automatic) ---
-        PASSWORD = constants.PASSWORD  # keep this here or read from config
+        password = constants.PASSWORD  # keep this here or read from config
         tokens = []
-        for ch in PASSWORD:
+        for ch in password:
             if ch.isupper():
                 tokens.append(f"Shift.{ch.lower()}")
             else:
@@ -291,7 +291,7 @@ class FeatureExtractor:
 
                 writer.writerow(row)
 
-            print(f"Features saved to: {filename}")
+            # print(f"Features saved to: {filename}")
             return True
 
         except Exception as e:

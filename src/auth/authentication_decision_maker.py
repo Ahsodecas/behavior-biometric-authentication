@@ -137,7 +137,7 @@ class AuthenticationDecisionMaker:
         """
 
         # password check
-        if password != self.password_fixed:
+        if password != constants.PASSWORD:
             return False, float("inf"), "Incorrect password."
 
         # Ensure model loaded

@@ -4,6 +4,7 @@
 
 import os
 
+from Demos.win32cred_demo import username
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
@@ -187,8 +188,16 @@ class AuthenticationWindow(QWidget):
 
     def submit_enrollment_sample(self):
         password = self.password_entry.text()
+        username = self.username_entry.text()
 
-        if password != self.password_fixed:
+        if not username:
+            QMessageBox.warning(self, "Enrollment", "Please enter a username")
+            return
+
+        self.username = username
+        self.data_utility.set_username(username)
+
+        if password != constants.PASSWORD:
             QMessageBox.warning(self, "Enrollment", "Password does not match")
             self.password_entry.clear()
             self.data_utility.reset(failed=True)
@@ -299,10 +308,9 @@ class AuthenticationWindow(QWidget):
 
             preprocessor = DataPreprocessor(
                 enrollment_csv=os.path.join(constants.PATH_EXTRACTED, username, "enrollment_features.csv"),
-                dsl_dataset_csv=os.path.join(constants.PATH_DATASETS, "DSL-StrongPasswordData.csv"),
                 username=username,
                 output_csv=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv"),
-                synth_reps = 0
+                synth_reps = 200
             )
 
             trainer = ModelTrainer(
@@ -482,7 +490,7 @@ class AuthenticationWindow(QWidget):
             elif text == "Authentication":
                 self.mode = "authentication"
                 try:
-                    self.authenticator.load_model(constants.MODEL_PATH, self.username)
+                    self.authenticator.load_model(constants.MODEL_PATH)
                 except Exception as e:
                     QMessageBox.critical(self, "Model load failed", str(e))
                     return

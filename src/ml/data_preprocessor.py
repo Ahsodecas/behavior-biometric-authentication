@@ -2,7 +2,7 @@ import os
 import csv
 import numpy as np
 import pandas as pd
-
+import src.constants as constants
 from src.utils.data_utility import DataUtility
 
 
@@ -15,11 +15,12 @@ class DataPreprocessor:
       - Combining everything into a single CSV for model training
     """
 
-    def __init__(self, enrollment_csv: str, dsl_dataset_csv: str, username: str, output_csv: str, synth_reps=200):
+    def __init__(self, enrollment_csv: str, username: str, output_csv: str, synth_reps=200):
         self.synth_reps = synth_reps
         self.data_utility = DataUtility()
         self.enrollment_csv = enrollment_csv
-        self.dsl_dataset_csv = dsl_dataset_csv
+        # self.generated_imposter_csv = generated_imposter_csv
+        # self.dsl_dataset_csv = dsl_dataset_csv
         self.username = username
         self.output_csv = output_csv
 
@@ -50,13 +51,14 @@ class DataPreprocessor:
                 return pd.DataFrame()
 
             synthetic_file = "synthetic_temp.csv"
+            synthetic_file_path = os.path.join(constants.PATH_EXTRACTED, f"{self.username}\\{synthetic_file}")
             try:
-                if os.path.exists(synthetic_file):
-                    os.remove(synthetic_file)
+                if os.path.exists(synthetic_file_path):
+                    os.remove(synthetic_file_path)
             except Exception as e:
-                print(f"[WARNING] Failed to delete old synthetic file '{synthetic_file}': {e}")
+                print(f"[WARNING] Failed to delete old synthetic file '{synthetic_file_path}': {e}")
 
-            username = self.data_utility.load_csv_key_features(self.enrollment_csv)
+            self.username = self.data_utility.load_csv_key_features(self.enrollment_csv)
 
             # Generate synthetic rows
             try:
@@ -69,7 +71,7 @@ class DataPreprocessor:
                 return pd.DataFrame()
 
             # Reload generated synthetic file
-            synth_df = self.load_csv(f"extracted_features/{username}/{synthetic_file}")
+            synth_df = self.load_csv(synthetic_file_path)
             if synth_df is None:
                 return pd.DataFrame()
             return synth_df
@@ -93,20 +95,14 @@ class DataPreprocessor:
             if synth_df is None:
                 synth_df = pd.DataFrame()
 
-            print("[DataProcessor] Loading DSL baseline dataset...")
+            print("[DataProcessor] Loading Imposter dataset dataset...")
+            generated_imposter_csv = "generated_imposter_data.csv"
             self.data_utility.generate_synthetic_features_imposter_users(
-                filename="generated_imposter_data.csv", repetitions=self.synth_reps)
-            dsl_df = self.load_csv("C:\\Users\\anast\\src\\repos\\behavior-biometric-authentication\\extracted_features\\ahsodecas\\generated_imposter_data.csv")
+                filename=generated_imposter_csv, repetitions=self.synth_reps)
+            dsl_df = self.load_csv(os.path.join(constants.PATH_EXTRACTED, f"{self.username}\\{generated_imposter_csv}"))
             if dsl_df is None:
-                print("[FATAL] DSL dataset missing. Cannot build training CSV.")
+                print("[FATAL] Imposter dataset missing. Cannot build training CSV.")
                 return None
-            #
-            # imposter_users_data_file = "C:\\Users\\anast\\src\\repos\\behavior-biometric-authentication\\extracted_features\\ahsodecas\\generated_imposter_data.csv"
-            # imposter_data = self.data_utility.generate_synthetic_features_imposter_users(filename="generated_imposter_data.csv", repetitions=self.synth_reps)
-            # dsl_df = pd.DataFrame(
-            #     [(feature, value) for sublist in imposter_data for (feature, value) in sublist],
-            #     columns=["feature", "value"]
-            # )
 
             print("[DataProcessor] Combining datasets...")
             try:
