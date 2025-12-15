@@ -45,8 +45,8 @@ class DataUtility:
     def generate_synthetic_features_imposter_users(self, filename: str, repetitions: int = 1):
         hold_features, dd_features, ud_features = self.keystrokeDatasetReader.load_key_dataset()
         generated_features = self.synthetic_features_generator_imposter_users.generate(hold_features=hold_features, dd_features=dd_features, ud_features=ud_features, repetitions=repetitions)
-        print("GENERATED IMPOSTER FEATURES, REPETITIONS: " + str(repetitions))
-        print(generated_features)
+        #print("GENERATED IMPOSTER FEATURES, REPETITIONS: " + str(repetitions))
+        #print(generated_features)
 
         for i in range(0, repetitions):
             new_metadata = {"subject" : "imposter",

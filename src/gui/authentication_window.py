@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QFrame
 )
 
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
 from numpy.f2py.crackfortran import usermodules
 
 from sklearn.preprocessing import StandardScaler

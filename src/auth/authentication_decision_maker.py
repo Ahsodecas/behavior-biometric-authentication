@@ -85,8 +85,8 @@ class AuthenticationDecisionMaker:
         # Compute reference sample as mean vector
         self.ref_sample = ref_matrix_norm.mean(axis=0).astype(np.float32)
 
-        print("Reference sample computed from real Ksenia samples.")
-        print(self.ref_sample)
+        #print("Reference sample computed from real Ksenia samples.")
+        #print(self.ref_sample)
 
         # -------------------------------
         # Load Triplet network
