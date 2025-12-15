@@ -22,6 +22,7 @@ from numpy.f2py.crackfortran import usermodules
 from sklearn.preprocessing import StandardScaler
 
 from src.ml.data_preprocessor import DataPreprocessor
+from src.ml.mouse_model_trainer import MouseModelTrainer
 from src.ml.training_worker import TrainingWorker
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
@@ -137,6 +138,7 @@ class AuthenticationWindow(QWidget):
                 return
 
             self.username = username
+            self.data_utility.set_username(username)
             self.authenticator.username = self.username
 
             self.mode = "set_password"
@@ -584,8 +586,162 @@ class AuthenticationWindow(QWidget):
             self.data_utility.reset(failed=True)
             self.password_entry.clear()
 
+    # =================================================================
+    #  MOUSE ENROLLMENT AND TRAINING
+    # =================================================================
+    def setup_mouse_enrollment_mode(self):
+        try:
+            self.resize(700, 400)
+            self.center_on_screen()
 
+            card = self.make_card()
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(30, 30, 30, 30)
+            layout.setSpacing(16)
 
+            # Title
+            top_row = QHBoxLayout()
+            top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+
+            title = QLabel("Mouse Enrollment")
+            title.setProperty("class", "title")
+            title.setAlignment(Qt.AlignCenter)
+
+            top_row.addStretch()
+            top_row.addWidget(title)
+            top_row.addStretch()
+            layout.addLayout(top_row)
+
+            # Instruction
+            instr = QLabel("Mouse data collection will start and run for 3 minutes.")
+            instr.setProperty("class", "instr")
+            instr.setAlignment(Qt.AlignCenter)
+            layout.addWidget(instr)
+
+            # Status label
+            self.mouse_status_label = QLabel("Status: Waiting...")
+            self.mouse_status_label.setProperty("class", "status")
+            self.mouse_status_label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(self.mouse_status_label)
+
+            # Start button
+            btn_row = QHBoxLayout()
+            btn_row.addStretch()
+            start_btn = QPushButton("Start Collection")
+            start_btn.setProperty("class", "primary")
+            start_btn.clicked.connect(self.start_mouse_collection)
+            btn_row.addWidget(start_btn)
+            btn_row.addStretch()
+            layout.addLayout(btn_row)
+
+            # Add card to main layout
+            self.layout.addStretch()
+            self.layout.addWidget(card, alignment=Qt.AlignCenter)
+            self.layout.addStretch()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Mouse Enrollment Error", str(e))
+
+    def start_mouse_collection(self):
+        try:
+            self.mouse_status_label.setText("Status: Collecting mouse data...")
+            self.mouse_timer = QTimer()
+            self.mouse_timer.setSingleShot(True)
+            self.mouse_timer.timeout.connect(self.finish_mouse_collection)
+            self.mouse_timer.start(1 * 60 * 1000)
+
+            self.data_utility.start_background_collection()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Mouse Collection Error", str(e))
+
+    def finish_mouse_collection(self):
+        self.data_utility.stop_background_collection()
+        self.data_utility.save_mouse_raw_csv(filename="mouse_enrollement.csv")
+        self.mouse_status_label.setText("Status: Collection Complete.")
+        QMessageBox.information(self, "Mouse Enrollment", "Mouse data collection finished.")
+
+    def setup_mouse_training_mode(self):
+        self.resize(700, 400)
+        self.center_on_screen()
+
+        card = self.make_card()
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(16)
+
+        # Title
+        top_row = QHBoxLayout()
+        top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+
+        title = QLabel("Mouse Training")
+        title.setProperty("class", "title")
+        title.setAlignment(Qt.AlignCenter)
+
+        top_row.addStretch()
+        top_row.addWidget(title)
+        top_row.addStretch()
+        layout.addLayout(top_row)
+
+        # Instruction
+        instr = QLabel("This will train the mouse behavioral model based on collected data.")
+        instr.setProperty("class", "instr")
+        instr.setAlignment(Qt.AlignCenter)
+        layout.addWidget(instr)
+
+        # Status label
+        self.mouse_training_status = QLabel("Press 'Start Mouse Training' to begin.")
+        self.mouse_training_status.setProperty("class", "status")
+        self.mouse_training_status.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.mouse_training_status)
+
+        # Start button
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+        start_btn = QPushButton("Start Mouse Training")
+        start_btn.setProperty("class", "primary")
+        start_btn.clicked.connect(self.start_mouse_training)
+        btn_row.addWidget(start_btn)
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        # Add card to main layout
+        self.layout.addStretch()
+        self.layout.addWidget(card, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
+
+    def start_mouse_training(self):
+        try:
+            self.mouse_training_status.setText("Mouse model training in progress... Please wait.")
+
+            enrollment_csv = os.path.join(constants.PATH_EXTRACTED, self.username, "mouse_enrollement.csv")
+            dataset_root = "datasets/sapimouse"
+            model_out_dir = constants.PATH_MODELS
+
+            trainer = MouseModelTrainer(
+                enrollment_csv=enrollment_csv,
+                username=self.username,
+                dataset_root=dataset_root,
+                out_dir=model_out_dir,
+                window_size=128,
+                step_size=64,
+                epochs=15,
+                batch_size=32,
+                lr=1e-3
+            )
+
+            # Train the model
+            model_path, auc = trainer.train()
+            self.mouse_training_status.setText(f"Training complete. ROC AUC: {auc:.4f}")
+            QMessageBox.information(
+                self,
+                "Mouse Training",
+                f"Mouse model training finished successfully.\nModel saved to:\n{model_path}\nROC AUC: {auc:.4f}"
+            )
+
+        except Exception as e:
+            QMessageBox.critical(self, "Mouse Training Error", str(e))
+            self.mouse_training_status.setText("Training failed.")
     # =================================================================
     #  MODE SWITCHING
     # =================================================================
@@ -601,12 +757,24 @@ class AuthenticationWindow(QWidget):
                 self.clear_layout()
                 self.setup_training_mode()
 
+            elif text == "Mouse Enrollment":
+                self.mode = "mouse_enroll"
+                self.clear_layout()
+                self.setup_mouse_enrollment_mode()
+
+            elif text == "Mouse Training":
+                self.mode = "mouse_train"
+                self.clear_layout()
+                self.setup_mouse_training_mode()
+
             elif text == "Authentication":
                 self.mode = "authentication"
                 try:
-                    self.authenticator.load_model(os.path.join(constants.PATH_MODELS, f"{self.username}_snn.pt"),
-                                                  username=self.username,
-                                                  training_csv=f"{self.username}_training.csv")
+                    self.authenticator.load_model(
+                        os.path.join(constants.PATH_MODELS, f"{self.username}_snn.pt"),
+                        username=self.username,
+                        training_csv=f"{self.username}_training.csv"
+                    )
                 except Exception as e:
                     QMessageBox.critical(self, "Model load failed", str(e))
                     return
@@ -700,7 +868,7 @@ class AuthenticationWindow(QWidget):
                 username=self.username,
                 data_utility=self.data_utility,
                 authenticator_model_path=os.path.join(
-                    constants.PATH_MODELS, f"{self.username}_cnn_mouse.keras"
+                    constants.PATH_MODELS, f"ksenia_cnn_model_working.keras"
                 ),
             )
 
@@ -794,15 +962,22 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Layout Clear Error", str(e))
 
-
     def create_mode_selector(self):
         box = QComboBox()
-        box.addItems(["Enrollment", "Training", "Authentication"])
+        box.addItems([
+            "Enrollment",
+            "Training",
+            "Mouse Enrollment",
+            "Mouse Training",
+            "Authentication"
+        ])
         box.setCurrentText({
-            "enrollment": "Enrollment",
-            "training": "Training",
-            "authentication": "Authentication"
-        }.get(self.mode, "Enrollment"))
+                               "enrollment": "Enrollment",
+                               "training": "Training",
+                               "mouse_enroll": "Mouse Enrollment",
+                               "mouse_train": "Mouse Training",
+                               "authentication": "Authentication"
+                           }.get(self.mode, "Enrollment"))
         box.currentTextChanged.connect(self.on_mode_changed)
         return box
 
