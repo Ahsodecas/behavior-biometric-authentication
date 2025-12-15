@@ -17,15 +17,14 @@ def tmp_collector(tmp_path):
         collector = MouseDataCollector(username="test_user")
         yield collector
 
-
 def test_initial_state(tmp_collector):
     c = tmp_collector
 
-    assert c.positions == []
-    assert c.clicks == []
+    assert c.events == []
     assert c.running is False
     assert c.thread is None
     assert c.rep_counter == 0
+    assert c.start_time is None
 
 
 def test_start_sets_running_and_thread(tmp_collector):
@@ -60,12 +59,11 @@ def test_stop_stops_thread(tmp_collector):
         assert c.running is False
         assert not c.thread.is_alive()
 
-
 def test_save_to_csv_creates_user_directory(tmp_collector, tmp_path):
     c = tmp_collector
 
-    c.positions.append((10, 20, 1.0))
-    c.clicks.append((10, 20, "Button.left", True, 2.0))
+    # add one synthetic event
+    c.events.append((0.0, "NoButton", "Move", 10, 20))
 
     c.save_to_csv()
 
@@ -76,6 +74,7 @@ def test_save_to_csv_creates_user_directory(tmp_collector, tmp_path):
     files = list(user_dir.iterdir())
     assert len(files) == 1
     assert files[0].name == "rep_0.csv"
+
 
 def test_rep_counter_increments(tmp_collector):
     c = tmp_collector
@@ -91,17 +90,14 @@ def test_custom_filename_does_not_increment_rep_counter(tmp_collector):
     c.save_to_csv("custom.csv")
 
     assert c.rep_counter == 0
-
 def test_save_to_csv_content(tmp_collector, tmp_path):
     c = tmp_collector
 
-    c.positions = [
-        (100, 200, 1.1),
-        (110, 210, 1.2),
-    ]
-    c.clicks = [
-        (120, 220, "Button.left", True, 1.3),
-        (120, 220, "Button.left", False, 1.4),
+    c.events = [
+        (1.1, "NoButton", "Move", 100, 200),
+        (1.2, "NoButton", "Move", 110, 210),
+        (1.3, "Button.left", "Pressed", 120, 220),
+        (1.4, "Button.left", "Released", 120, 220),
     ]
 
     c.save_to_csv("test.csv")
@@ -112,16 +108,9 @@ def test_save_to_csv_content(tmp_collector, tmp_path):
     with open(csv_path, newline="") as f:
         rows = list(csv.reader(f))
 
-    assert rows[0] == [
-        "event_type", "x", "y", "button", "pressed", "timestamp"
-    ]
+    assert rows[0] == ["timestamp", "button", "state", "x", "y"]
 
-    assert rows[1] == ["move", "100", "200", "", "", "1.1"]
-    assert rows[2] == ["move", "110", "210", "", "", "1.2"]
-    assert rows[3] == ["click", "120", "220", "Button.left", "True", "1.3"]
-    assert rows[4] == ["click", "120", "220", "Button.left", "False", "1.4"]
-
-
-
-
-
+    assert rows[1] == ["1.1", "NoButton", "Move", "100", "200"]
+    assert rows[2] == ["1.2", "NoButton", "Move", "110", "210"]
+    assert rows[3] == ["1.3", "Button.left", "Pressed", "120", "220"]
+    assert rows[4] == ["1.4", "Button.left", "Released", "120", "220"]

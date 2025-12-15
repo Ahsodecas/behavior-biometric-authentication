@@ -50,6 +50,7 @@ class DataPreprocessor:
             print("[ERROR] Enrollment CSV is empty or missing. Cannot generate synthetic data.")
             return pd.DataFrame()
 
+        synthetic_file = "synthetic_file.csv"
         synthetic_file_path = os.path.join(self.base_dir, "synthetic_file.csv")
         try:
             if os.path.exists(synthetic_file_path):

@@ -103,38 +103,42 @@ def extractor(tmp_path):
 
 
 def test_generate_required_features_order_and_content(extractor):
+    import src.constants as constants
+    constants.PASSWORD = ".tie5Roanl"
+
     feats = extractor.generate_required_features()
 
     assert feats == [
-         'H..',
-         'DD...t',
-         'UD...t',
-         'H.t',
-         'DD.t.i',
-         'UD.t.i',
-         'H.i',
-         'DD.i.e',
-         'UD.i.e',
-         'H.e',
-         'DD.e.5',
-         'UD.e.5',
-         'H.5',
-         'DD.5.Shift.r',
-         'UD.5.Shift.r',
-         'H.Shift.r',
-         'DD.Shift.r.o',
-         'UD.Shift.r.o',
-         'H.o',
-         'DD.o.a',
-         'UD.o.a',
-         'H.a',
-         'DD.a.n',
-         'UD.a.n',
-         'H.n',
-         'DD.n.l',
-         'UD.n.l',
-         'H.l'
+        'H..',
+        'DD...t',
+        'UD...t',
+        'H.t',
+        'DD.t.i',
+        'UD.t.i',
+        'H.i',
+        'DD.i.e',
+        'UD.i.e',
+        'H.e',
+        'DD.e.5',
+        'UD.e.5',
+        'H.5',
+        'DD.5.Shift.r',
+        'UD.5.Shift.r',
+        'H.Shift.r',
+        'DD.Shift.r.o',
+        'UD.Shift.r.o',
+        'H.o',
+        'DD.o.a',
+        'UD.o.a',
+        'H.a',
+        'DD.a.n',
+        'UD.a.n',
+        'H.n',
+        'DD.n.l',
+        'UD.n.l',
+        'H.l'
     ]
+
 
 
 def test_create_features_directory_called(tmp_path):
@@ -142,14 +146,16 @@ def test_create_features_directory_called(tmp_path):
         FeatureExtractor(username="x")
         assert tmp_path.exists()
 
-
 def test_extract_key_features_simple_sequence(extractor):
+    import src.constants as constants
+    constants.PASSWORD = ".ti"
+
     extractor.raw_key_data = [
-        KeyStrokeEvent(190, "press", 0.0, 0.0, "."),  # .
+        KeyStrokeEvent(190, "press", 0.0, 0.0, "."),
         KeyStrokeEvent(190, "release", 0.1, 0.1, "."),
-        KeyStrokeEvent(84, "press", 0.2, 0.2, "t"),  # t
+        KeyStrokeEvent(84, "press", 0.2, 0.2, "t"),
         KeyStrokeEvent(84, "release", 0.3, 0.3, "t"),
-        KeyStrokeEvent(73, "press", 0.4, 0.4, "i"),  # i
+        KeyStrokeEvent(73, "press", 0.4, 0.4, "i"),
         KeyStrokeEvent(73, "release", 0.5, 0.5, "i"),
     ]
 
@@ -157,6 +163,7 @@ def test_extract_key_features_simple_sequence(extractor):
 
     assert extractor.key_features.get_key("H..") == pytest.approx(0.1)
     assert extractor.key_features.get_key("H.t") == pytest.approx(0.1)
+    assert extractor.key_features.get_key("H.i") == pytest.approx(0.1)
 
 
 # def test_extract_key_features_shifted_key(extractor):
@@ -185,6 +192,10 @@ def test_metadata_written(extractor):
     assert meta["rep"] == 0
 
 def test_save_key_features_csv(tmp_path, extractor):
+    import src.constants as constants
+    constants.PASSWORD = "a"
+    extractor.feature_cols = extractor.generate_required_features()
+
     extractor.raw_key_data = [
         KeyStrokeEvent(65, "press", 1.0, 1.0, "a"),
         KeyStrokeEvent(65, "release", 1.2, 1.2, "a"),
@@ -193,7 +204,7 @@ def test_save_key_features_csv(tmp_path, extractor):
 
     out = tmp_path / "out.csv"
 
-    ok = extractor.save_key_features_csv(filename=out)
+    ok = extractor.save_key_features_csv(filename=str(out))
 
     assert ok is True
     assert out.exists()
@@ -201,9 +212,10 @@ def test_save_key_features_csv(tmp_path, extractor):
     with open(out, newline="", encoding="utf-8") as f:
         rows = list(csv.reader(f))
 
-    # header + one row
     assert len(rows) == 2
     assert "H.a" in rows[0]
+
+
 def test_missing_features_written_as_zero(tmp_path, extractor):
     extractor.raw_key_data = [
         KeyStrokeEvent(65, "press", 1.0, 1.0, "a"),

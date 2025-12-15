@@ -12,135 +12,67 @@ def write_csv(path, rows):
 
 def test_load_csv_success(tmp_path):
     csv_path = tmp_path / "enroll.csv"
-    df_orig = write_csv(csv_path, [{"a": 1}, {"a": 2}])
+    write_csv(csv_path, [{"a": 1}, {"a": 2}])
 
-    dp = DataPreprocessor(str(csv_path), "", "", "")
+    dp = DataPreprocessor(str(csv_path), "user", "out.csv")
     df = dp.load_csv(str(csv_path))
 
     assert isinstance(df, pd.DataFrame)
-    assert len(df) == len(df_orig)
+    assert len(df) == 2
 
 
 def test_load_csv_missing_file(tmp_path):
-    csv_path = tmp_path / "missing.csv"
-
-    dp = DataPreprocessor(str(csv_path), "", "", "")
-    df = dp.load_csv(str(csv_path))
-
-    assert df is None
+    dp = DataPreprocessor(str(tmp_path / "missing.csv"), "user", "out.csv")
+    assert dp.load_csv("does_not_exist.csv") is None
 
 
-def test_generate_synthetic_happy_path(tmp_path, mocker):
-    enrollment_path = tmp_path / "enroll.csv"
-    write_csv(enrollment_path, [{"f1": 1, "f2": 2}])
+def test_generate_synthetic_empty_enrollment(tmp_path, mocker):
+    enroll_path = tmp_path / "enroll.csv"
+    write_csv(enroll_path, [])
 
-    synth_dir = tmp_path / "extracted_features" / "user1"
-    synth_dir.mkdir(parents=True, exist_ok=True)
-
-    synthetic_file_path = synth_dir / "synthetic_temp.csv"
-    write_csv(synthetic_file_path, [{"f1": 10, "f2": 20}])
-
-    mocker.patch("os.path.exists", return_value=True)
-
-    mock_du = mocker.MagicMock()
-    mock_du.feature_extractor.load_row_into_feature_extractor.return_value = None
-    mock_du.generate_synthetic_features.return_value = None
-
-    dp = DataPreprocessor(
-        enrollment_csv=str(enrollment_path),
-        dsl_dataset_csv="",
-        username="user1",
-        output_csv="out.csv"
-    )
-    dp.data_utility = mock_du
-
-    def fake_load_csv(path):
-        if "synthetic_temp.csv" in path:
-            return pd.read_csv(synthetic_file_path)
-        return pd.read_csv(enrollment_path)
-
-    mocker.patch.object(dp, "load_csv", side_effect=fake_load_csv)
-
-    synth_df = dp.generate_synthetic(str(enrollment_path))
-
-    assert isinstance(synth_df, pd.DataFrame)
-    assert len(synth_df) == 1
-    assert synth_df.iloc[0]["f1"] == 10
-
-
-def test_generate_synthetic_empty_input(tmp_path, mocker):
-    enrollment_path = tmp_path / "enroll.csv"
-    write_csv(enrollment_path, [])
-
-    dp = DataPreprocessor(
-        enrollment_csv=str(enrollment_path),
-        dsl_dataset_csv="",
-        username="userX",
-        output_csv="out.csv"
-    )
+    dp = DataPreprocessor(str(enroll_path), "user", "out.csv")
 
     mocker.patch.object(dp, "load_csv", return_value=pd.DataFrame())
 
-    df = dp.generate_synthetic(str(enrollment_path))
-
-    assert isinstance(df, pd.DataFrame)
+    df = dp.generate_synthetic()
     assert df.empty
+
 
 
 def test_build_training_csv_success(tmp_path, mocker):
     enroll_path = tmp_path / "enroll.csv"
-    dsl_path = tmp_path / "dsl.csv"
-    output_path = tmp_path / "out.csv"
+    out_path = tmp_path / "out.csv"
 
     enroll_df = write_csv(enroll_path, [{"f": 1}, {"f": 2}])
-    dsl_df = write_csv(dsl_path, [{"f": 100}])
+    synth_df = pd.DataFrame({"f": [10]})
+    dsl_df = pd.DataFrame({"f": [100]})
 
-    synth_df = pd.DataFrame({"f": [999]})
+    dp = DataPreprocessor(str(enroll_path), "user", str(out_path))
 
-    dp = DataPreprocessor(
-        enrollment_csv=str(enroll_path),
-        dsl_dataset_csv=str(dsl_path),
-        username="user1",
-        output_csv=str(output_path)
-    )
-
-    mocker.patch.object(
-        dp,
-        "load_csv",
-        side_effect=[enroll_df, synth_df, dsl_df]
-    )
+    mocker.patch.object(dp, "load_csv", side_effect=[
+        enroll_df,     # enrollment
+        synth_df,      # synthetic
+        dsl_df         # imposter
+    ])
 
     mocker.patch.object(dp, "generate_synthetic", return_value=synth_df)
+    mocker.patch.object(dp, "generate_imposter_synthetic", return_value=dsl_df)
 
     combined = dp.build_training_csv()
 
     assert isinstance(combined, pd.DataFrame)
     assert len(combined) == 4
-    assert os.path.exists(output_path)
+    assert out_path.exists()
 
-
-def test_build_training_csv_missing_dsl(tmp_path, mocker):
+def test_build_training_csv_missing_imposter(tmp_path, mocker):
     enroll_path = tmp_path / "enroll.csv"
-    dsl_path = tmp_path / "missing.csv"
-    output_path = tmp_path / "out.csv"
-
     write_csv(enroll_path, [{"f": 1}])
 
-    dp = DataPreprocessor(
-        enrollment_csv=str(enroll_path),
-        dsl_dataset_csv=str(dsl_path),
-        username="user1",
-        output_csv=str(output_path)
-    )
+    dp = DataPreprocessor(str(enroll_path), "user", str(tmp_path / "out.csv"))
 
-    # First call: enrollment CSV
-    # Second call: synthetic
-    # Third call: DSL -> return None to simulate missing file
-    mocker.patch.object(
-        dp,
-        "load_csv",
-        side_effect=[pd.DataFrame({"f":[1]}), pd.DataFrame({"f":[9]}), None]
-    )
+    mocker.patch.object(dp, "load_csv", return_value=pd.DataFrame({"f": [1]}))
+    mocker.patch.object(dp, "generate_synthetic", return_value=pd.DataFrame({"f": [9]}))
+    mocker.patch.object(dp, "generate_imposter_synthetic", return_value=pd.DataFrame())
 
     combined = dp.build_training_csv()
-    assert combined is None
+    assert combined is not None

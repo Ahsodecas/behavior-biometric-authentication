@@ -27,6 +27,7 @@ def test_auth_model_not_loaded(auth: AuthenticationDecisionMaker):
 
     success, dist, msg = auth.authenticate(
         username="user",
+        password=".tie5Roanl",
         feature_dict={}
     )
 
@@ -35,8 +36,7 @@ def test_auth_model_not_loaded(auth: AuthenticationDecisionMaker):
     assert msg == "Model not loaded."
 
 
-
-def test_auth_datetime_conversion(auth: AuthenticationDecisionMaker, mocker: MockerFixture):
+def test_auth_datetime_conversion(auth, mocker):
 
     auth.model = mocker.MagicMock()
     auth.scaler = mocker.MagicMock()
@@ -44,7 +44,8 @@ def test_auth_datetime_conversion(auth: AuthenticationDecisionMaker, mocker: Moc
 
     auth.scaler.transform.return_value = np.array([[0.1]])
 
-    mocker.patch.object(auth, "compute_distance", return_value=0.1)
+    # MUST be < threshold (0.1)
+    mocker.patch.object(auth, "compute_distance", return_value=0.05)
 
     success, dist, msg = auth.authenticate(
         username="user",
@@ -73,8 +74,7 @@ def test_auth_scaler_failure(auth: AuthenticationDecisionMaker, mocker: MockerFi
     assert success is False
     assert "Scaler transform failed" in msg
 
-
-def test_auth_success(auth: AuthenticationDecisionMaker, mocker: MockerFixture):
+def test_auth_success(auth, mocker):
 
     auth.model = mocker.MagicMock()
     auth.scaler = mocker.MagicMock()
@@ -82,7 +82,8 @@ def test_auth_success(auth: AuthenticationDecisionMaker, mocker: MockerFixture):
 
     auth.scaler.transform.return_value = np.array([[0.0]])
 
-    mocker.patch.object(auth, "compute_distance", return_value=0.1)
+    # MUST be < threshold
+    mocker.patch.object(auth, "compute_distance", return_value=0.05)
 
     success, dist, msg = auth.authenticate(
         username="u",
