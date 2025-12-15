@@ -16,8 +16,8 @@ class AuthenticationDecisionMaker:
     The GUI should only call authenticator.authenticate().
     """
 
-    def __init__(self, threshold=0.4):
-        self.password_fixed = constants.PASSWORD
+    def __init__(self, username=None, threshold=0.4):
+        self.username = username
         self.threshold = threshold
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -29,7 +29,7 @@ class AuthenticationDecisionMaker:
     # ---------------------------------------------------------
     # ------------ LOAD MODEL + SCALER + REF SAMPLE ----------
     # ---------------------------------------------------------
-    def load_model(self, ckpt_path, username):
+    def load_model(self, ckpt_path):
         # -------------------------------
         # Checkpoint file must exist
         # -------------------------------
@@ -41,16 +41,13 @@ class AuthenticationDecisionMaker:
         #   - scaler
         #   - feature columns
         # -------------------------------
-        training_csv = "ksenia_training_2.csv"
+        training_csv = f"datasets/{self.username}_training.csv"
 
         if not os.path.exists(training_csv):
             raise FileNotFoundError(f"Training CSV not found: {training_csv}")
 
         tmp_dataset = CMUDatasetTriplet(training_csv)
         input_dim = tmp_dataset.X.shape[1]
-        print(f"X: {tmp_dataset.X.shape}")
-        print(f"Input dimension: {input_dim}")
-        print(f"feature_cols: {tmp_dataset.feature_cols}")
 
         self.scaler = tmp_dataset.scaler
         self.feature_cols = tmp_dataset.feature_cols

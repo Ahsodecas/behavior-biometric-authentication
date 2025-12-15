@@ -92,6 +92,9 @@ class DataUtility:
     def save_mouse_raw_csv(self, filename=None):
         self.mouse_data_collector.save_to_csv(filename)
 
-    def reset(self):
-        self.data_collector.clear_for_next_rep()
-        self.feature_extractor.clear_for_next_rep()
+    def reset(self, failed=False):
+        self.data_collector.clear_for_next_rep(failed=failed)
+        self.feature_extractor.clear_for_next_rep(failed=failed)
+
+    def clear_mouse_data(self):
+        self.mouse_data_collector.clear()

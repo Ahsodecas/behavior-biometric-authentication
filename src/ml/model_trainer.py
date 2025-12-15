@@ -10,11 +10,12 @@ from src.ml.snn_model import TripletSNN
 class ModelTrainer:
     """Handles training, checkpointing, and saving the SNN model."""
 
-    def __init__(self, csv_path, out_dir, batch_size=64, lr=1e-3,
+    def __init__(self, csv_path, out_dir, username, batch_size=64, lr=1e-3,
                  hidden=128, embedding=128, dropout=0.3, margin=1.0, val_split=0.1):
         # Store config but do not initialize everything yet
         self.csv_path = csv_path
         self.out_dir = out_dir
+        self.username = username
         self.batch_size = batch_size
         self.lr = lr
         self.hidden = hidden
@@ -102,7 +103,7 @@ class ModelTrainer:
             print(f"Epoch {epoch}/{epochs}  train_loss={avg_loss:.5f}")
 
         # Save model
-        final_path = os.path.join(self.out_dir, "snn_final.pt")
+        final_path = os.path.join(self.out_dir, f"{self.username}_snn.pt")
         torch.save({'epoch': epochs, 'model_state': self.model.state_dict()}, final_path)
         print("Final model saved:", final_path)
 
