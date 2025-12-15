@@ -662,6 +662,7 @@ class AuthenticationWindow(QWidget):
             if not self.bg_manager:
                 return
 
+
             if accepted:
                 self.bg_status_label.setText("● Authenticated")
 
@@ -685,7 +686,7 @@ class AuthenticationWindow(QWidget):
                 QMessageBox.warning(
                     self,
                     "Authentication Failed",
-                    "Behavioral authentication failed. Please authenticate again."
+                    f"Behavioral authentication failed. Score: {mean_score}.\nPlease authenticate again."
                 )
                 self.close_background_mode()
 
