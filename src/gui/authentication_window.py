@@ -138,12 +138,12 @@ class AuthenticationWindow(QWidget):
 
             self.username = username
             self.authenticator.username = self.username
-            self.enroll_count = 0
-            self.mode = "enrollment"
-            self.setup_enrollment_mode()
+
+            self.mode = "set_password"
+            self.setup_set_password_page()
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred during registration:\n{str(e)}")
-            print(f"handle_register error: {e}")
 
     def handle_login(self):
         try:
@@ -170,6 +170,103 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred during login:\n{str(e)}")
             print(f"handle_login error: {e}")
+
+    def setup_set_password_page(self):
+        self.clear_layout()
+        self.resize(700, 450)
+        self.center_on_screen()
+
+        card = self.make_card()
+        card.setMinimumHeight(360)
+
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(40, 40, 40, 40)
+        card_layout.setSpacing(24)
+
+        # ── Title ─────────────────────────────
+        title = QLabel("Set Your Password")
+        title.setProperty("class", "title")
+        title.setAlignment(Qt.AlignCenter)
+        card_layout.addWidget(title)
+
+        instr = QLabel(
+            "This password will be used for enrollment\nand future authentication."
+        )
+        instr.setProperty("class", "instr")
+        instr.setAlignment(Qt.AlignCenter)
+        card_layout.addWidget(instr)
+
+        card_layout.addSpacing(10)
+
+        # ── Password row ──────────────────────
+        pwd_row = QHBoxLayout()
+        pwd_row.setSpacing(12)
+
+        pwd_label = QLabel("Password:")
+        pwd_label.setProperty("class", "field-label")
+        pwd_row.addWidget(pwd_label, alignment=Qt.AlignVCenter)
+
+        self.new_password_entry = QLineEdit()
+        self.new_password_entry.setEchoMode(QLineEdit.Password)
+        self.new_password_entry.setPlaceholderText("Enter a password")
+        pwd_row.addWidget(self.new_password_entry)
+
+        card_layout.addLayout(pwd_row)
+
+        # ── Confirm password row ──────────────
+        confirm_row = QHBoxLayout()
+        confirm_row.setSpacing(12)
+
+        confirm_label = QLabel("Confirm:")
+        confirm_label.setProperty("class", "field-label")
+        confirm_row.addWidget(confirm_label, alignment=Qt.AlignVCenter)
+
+        self.confirm_password_entry = QLineEdit()
+        self.confirm_password_entry.setEchoMode(QLineEdit.Password)
+        self.confirm_password_entry.setPlaceholderText("Confirm password")
+        confirm_row.addWidget(self.confirm_password_entry)
+
+        card_layout.addLayout(confirm_row)
+
+        card_layout.addSpacing(20)
+
+        # ── Button row ────────────────────────
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+
+        btn = QPushButton("Continue to Enrollment")
+        btn.setProperty("class", "primary")
+        btn.setMinimumWidth(220)
+        btn.clicked.connect(self.save_password_and_continue)
+        btn_row.addWidget(btn)
+
+        btn_row.addStretch()
+        card_layout.addLayout(btn_row)
+
+        # ── Mount card ────────────────────────
+        self.layout.addStretch()
+        self.layout.addWidget(card, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
+
+    def save_password_and_continue(self):
+        pwd1 = self.new_password_entry.text()
+        pwd2 = self.confirm_password_entry.text()
+
+        if not pwd1 or not pwd2:
+            QMessageBox.warning(self, "Password", "Please fill both fields.")
+            return
+
+        if pwd1 != pwd2:
+            QMessageBox.warning(self, "Password", "Passwords do not match.")
+            return
+
+        constants.PASSWORD = pwd1
+
+        QMessageBox.information(self, "Password Set", "Password saved successfully.")
+
+        self.mode = "enrollment"
+        self.enroll_count = 0
+        self.setup_enrollment_mode()
 
     # =================================================================
     #  ENROLLMENT MODE
