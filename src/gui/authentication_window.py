@@ -181,37 +181,31 @@ class AuthenticationWindow(QWidget):
 
             card = self.make_card()
             card.setMinimumWidth(520)
-            #card.setMinimumHeight(320)
 
             layout = QVBoxLayout(card)
             layout.setContentsMargins(30, 30, 30, 30)
             layout.setSpacing(16)
 
-            # Title
             title = QLabel("Set Your Password")
             title.setProperty("class", "title")
             title.setAlignment(Qt.AlignCenter)
             layout.addWidget(title)
 
-            # Subtitle
             subtitle = QLabel("Create a password for your new account")
             subtitle.setProperty("class", "instr")
             subtitle.setAlignment(Qt.AlignCenter)
             layout.addWidget(subtitle)
 
-            # New password field
             self.new_password_entry = QLineEdit()
             self.new_password_entry.setEchoMode(QLineEdit.Password)
             self.new_password_entry.setPlaceholderText("Enter new password")
             layout.addWidget(self.new_password_entry)
 
-            # Confirm password field
             self.confirm_password_entry = QLineEdit()
             self.confirm_password_entry.setEchoMode(QLineEdit.Password)
             self.confirm_password_entry.setPlaceholderText("Confirm password")
             layout.addWidget(self.confirm_password_entry)
 
-            # Buttons row
             btn_row = QHBoxLayout()
             btn_row.setSpacing(16)
 
@@ -230,7 +224,6 @@ class AuthenticationWindow(QWidget):
 
             layout.addLayout(btn_row)
 
-            # Add card to main layout
             self.layout.addStretch()
             self.layout.addWidget(card, alignment=Qt.AlignCenter)
             self.layout.addStretch()
@@ -272,14 +265,12 @@ class AuthenticationWindow(QWidget):
             card = self.make_card()
             card_layout = self.setup_enrollment_card_layout(card)
 
-            # Add form components
             self.add_card_layout_instructions(card_layout)
             self.add_card_username_input(card_layout)
             self.add_card_password_input(card_layout)
             self.add_card_enrollment_buttons(card_layout)
             self.add_card_enrollment_progress_label(card_layout)
 
-            # Add card to main layout
             self.layout.addStretch()
             self.layout.addWidget(card, alignment=Qt.AlignCenter)
             self.layout.addStretch()
@@ -294,7 +285,6 @@ class AuthenticationWindow(QWidget):
         password = self.password_entry.text()
         username = self.username_entry.text()
         try:
-            # Validation
             if not username:
                 QMessageBox.warning(self, "Enrollment", "Enter a username.")
                 self.password_entry.clear()
@@ -309,7 +299,6 @@ class AuthenticationWindow(QWidget):
                 return
 
             self.data_utility.set_username(username)
-            # Feature extraction
             self.data_utility.extract_features(username)
             filename = "enrollment_features.csv"
 
@@ -319,7 +308,6 @@ class AuthenticationWindow(QWidget):
                 append=self.enroll_append
             )
 
-            # Update progress
             self.enroll_count += 1
             self.progress_label.setText(
                 f"Samples collected: {self.enroll_count} / {self.enroll_target}"
@@ -347,23 +335,11 @@ class AuthenticationWindow(QWidget):
             QMessageBox.warning(self, "Load CSV", "Selected file does not exist.")
             return
 
-        metadata = {}
-        features = {}
-        username = ""
 
         try:
-            self.username = self.data_utility.load_csv_key_features(file_path)
-            self.data_utility.set_username(self.username)
+            self.data_utility.load_csv_key_features(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
-
-            #print("Features read: ")
-            #print(self.data_utility.feature_extractor.key_features.all_features)
-            filename = (
-                self.enroll_filename
-                if self.enroll_append else
-                f"{self.enroll_count}_{self.enroll_filename}"
-            )
-
+            self.on_mode_changed("Training")
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
 
@@ -452,7 +428,7 @@ class AuthenticationWindow(QWidget):
         self.training_status.setText("Training finished.")
         self.train_button.setEnabled(False)
         QMessageBox.information(self, "Training", "Model training finished successfully.")
-        self.on_mode_changed("Authentication")
+        self.on_mode_changed("Mouse Enrollment")
 
     def on_data_processing_finished(self):
         self.training_status.setText("Data Processing finished. Training... Please wait.")
@@ -486,7 +462,6 @@ class AuthenticationWindow(QWidget):
         top_row.addStretch()
         card_layout.addLayout(top_row)
 
-        # Username input
         urow = QHBoxLayout()
         self.username_label = QLabel("Username:")
         self.username_label.setProperty("class", "field-label")
@@ -497,7 +472,6 @@ class AuthenticationWindow(QWidget):
         urow.addWidget(self.username_entry)
         card_layout.addLayout(urow)
 
-        # Password input
         prow = QHBoxLayout()
         self.password_label = QLabel("Password:")
         self.password_label.setProperty("class", "field-label")
@@ -510,7 +484,6 @@ class AuthenticationWindow(QWidget):
         prow.addWidget(self.password_entry)
         card_layout.addLayout(prow)
 
-        # Authenticate button
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
@@ -522,13 +495,11 @@ class AuthenticationWindow(QWidget):
         btn_row.addStretch()
         card_layout.addLayout(btn_row)
 
-        # Result label
         self.result_label = QLabel("")
         self.result_label.setProperty("class", "status")
         self.result_label.setAlignment(Qt.AlignCenter)
         card_layout.addWidget(self.result_label)
 
-        # Add card to layout
         self.layout.addStretch()
         self.layout.addWidget(card, alignment=Qt.AlignCenter)
         self.layout.addStretch()
@@ -599,7 +570,6 @@ class AuthenticationWindow(QWidget):
             layout.setContentsMargins(30, 30, 30, 30)
             layout.setSpacing(16)
 
-            # Title
             top_row = QHBoxLayout()
             top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
@@ -612,29 +582,33 @@ class AuthenticationWindow(QWidget):
             top_row.addStretch()
             layout.addLayout(top_row)
 
-            # Instruction
             instr = QLabel("Mouse data collection will start and run for 3 minutes.")
             instr.setProperty("class", "instr")
             instr.setAlignment(Qt.AlignCenter)
             layout.addWidget(instr)
 
-            # Status label
             self.mouse_status_label = QLabel("Status: Waiting...")
             self.mouse_status_label.setProperty("class", "status")
             self.mouse_status_label.setAlignment(Qt.AlignCenter)
             layout.addWidget(self.mouse_status_label)
 
-            # Start button
+            # Buttons row
             btn_row = QHBoxLayout()
             btn_row.addStretch()
+
             start_btn = QPushButton("Start Collection")
             start_btn.setProperty("class", "primary")
             start_btn.clicked.connect(self.start_mouse_collection)
             btn_row.addWidget(start_btn)
+
+            load_btn = QPushButton("Load Mouse CSV")
+            load_btn.setProperty("class", "secondary")
+            load_btn.clicked.connect(self.load_mouse_csv)
+            btn_row.addWidget(load_btn)
+
             btn_row.addStretch()
             layout.addLayout(btn_row)
 
-            # Add card to main layout
             self.layout.addStretch()
             self.layout.addWidget(card, alignment=Qt.AlignCenter)
             self.layout.addStretch()
@@ -642,6 +616,23 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Mouse Enrollment Error", str(e))
 
+    # -------------------------------------------------------------------------
+    # Mock handler for Load Mouse CSV
+    # -------------------------------------------------------------------------
+    def load_mouse_csv(self):
+        try:
+            file_path, _ = QFileDialog.getOpenFileName(self, "Open Mouse Features CSV", "", "CSV Files (*.csv)")
+            if not file_path:
+                return
+
+            # Mock successful loading (replace with real logic later)
+            QMessageBox.information(self, "Load Mouse CSV", f"Successfully loaded {file_path}")
+
+            # Switch to Mouse Training mode
+            self.on_mode_changed("Mouse Training")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Load Mouse CSV Error", str(e))
     def start_mouse_collection(self):
         try:
             self.mouse_status_label.setText("Status: Collecting mouse data...")
@@ -661,6 +652,8 @@ class AuthenticationWindow(QWidget):
         self.mouse_status_label.setText("Status: Collection Complete.")
         QMessageBox.information(self, "Mouse Enrollment", "Mouse data collection finished.")
 
+        self.on_mode_changed("Mouse Training")
+
     def setup_mouse_training_mode(self):
         self.resize(700, 400)
         self.center_on_screen()
@@ -670,7 +663,6 @@ class AuthenticationWindow(QWidget):
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(16)
 
-        # Title
         top_row = QHBoxLayout()
         top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
@@ -683,19 +675,16 @@ class AuthenticationWindow(QWidget):
         top_row.addStretch()
         layout.addLayout(top_row)
 
-        # Instruction
         instr = QLabel("This will train the mouse behavioral model based on collected data.")
         instr.setProperty("class", "instr")
         instr.setAlignment(Qt.AlignCenter)
         layout.addWidget(instr)
 
-        # Status label
         self.mouse_training_status = QLabel("Press 'Start Mouse Training' to begin.")
         self.mouse_training_status.setProperty("class", "status")
         self.mouse_training_status.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.mouse_training_status)
 
-        # Start button
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         start_btn = QPushButton("Start Mouse Training")
@@ -732,12 +721,13 @@ class AuthenticationWindow(QWidget):
 
             # Train the model
             model_path, auc = trainer.train()
-            self.mouse_training_status.setText(f"Training complete. ROC AUC: {auc:.4f}")
+            self.mouse_training_status.setText(f"Training complete.")
             QMessageBox.information(
                 self,
                 "Mouse Training",
-                f"Mouse model training finished successfully.\nModel saved to:\n{model_path}\nROC AUC: {auc:.4f}"
+                f"Mouse model training finished successfully.\nModel saved to:\n{model_path}"
             )
+            self.on_mode_changed("Authentication")
 
         except Exception as e:
             QMessageBox.critical(self, "Mouse Training Error", str(e))
