@@ -868,7 +868,7 @@ class AuthenticationWindow(QWidget):
                 username=self.username,
                 data_utility=self.data_utility,
                 authenticator_model_path=os.path.join(
-                    constants.PATH_MODELS, f"ksenia_cnn_model_working.keras"
+                    constants.PATH_MODELS, f"ksenia_cnn_mouse_working.keras"
                 ),
             )
 
