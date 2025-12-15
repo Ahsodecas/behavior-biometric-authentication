@@ -1,5 +1,8 @@
 import os
+import csv
+import numpy as np
 import pandas as pd
+import src.constants as constants
 from src.utils.data_utility import DataUtility
 
 
@@ -33,6 +36,7 @@ class DataPreprocessor:
             df = pd.read_csv(path)
             print(f"[DataPreprocessor] Loaded CSV: {path} (rows={len(df)})")
             return df
+
         except Exception as e:
             print(f"[ERROR] Failed to load CSV '{path}': {e}")
             return None
@@ -46,11 +50,12 @@ class DataPreprocessor:
             print("[ERROR] Enrollment CSV is empty or missing. Cannot generate synthetic data.")
             return pd.DataFrame()
 
-        synthetic_file = os.path.join(self.base_dir, "synthetic_file.csv")
-        if os.path.exists(synthetic_file):
-            os.remove(synthetic_file)
-
-        self.data_utility.load_csv_key_features(self.enrollment_csv)
+        synthetic_file_path = os.path.join(self.base_dir, "synthetic_file.csv")
+        try:
+            if os.path.exists(synthetic_file_path):
+                os.remove(synthetic_file_path)
+        except Exception as e:
+            print(f"[WARNING] Failed to delete old synthetic file '{synthetic_file_path}': {e}")
 
         try:
             self.data_utility.generate_synthetic_features(
@@ -69,6 +74,12 @@ class DataPreprocessor:
     # -------------------------------------------------------
     def generate_imposter_synthetic(self):
         imposter_file = os.path.join(self.base_dir, "generated_imposter_data.csv")
+
+        try:
+            if os.path.exists(imposter_file):
+                os.remove(imposter_file)
+        except Exception as e:
+            print(f"[WARNING] Failed to delete old synthetic file '{imposter_file}': {e}")
         try:
             self.data_utility.generate_synthetic_features_imposter_users(
                 filename=imposter_file,
@@ -91,8 +102,7 @@ class DataPreprocessor:
             if enroll_df is None:
                 print("[FATAL] No enrollment dataset. Cannot proceed.")
                 return None
-
-            print("[DataPreprocessor] Generating synthetic samples...")
+            print("[DataProcessor] Generating synthetic samples via DataUtility...")
             synth_df = self.generate_synthetic()
 
             print("[DataPreprocessor] Generating imposter samples...")

@@ -7,7 +7,7 @@ from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 
 @pytest.fixture
 def auth():
-    return AuthenticationDecisionMaker(password_fixed=".tie5Roanl", threshold=0.4)
+    return AuthenticationDecisionMaker(threshold=0.1)
 
 
 def test_auth_wrong_password(auth: AuthenticationDecisionMaker):
@@ -27,7 +27,6 @@ def test_auth_model_not_loaded(auth: AuthenticationDecisionMaker):
 
     success, dist, msg = auth.authenticate(
         username="user",
-        password=".tie5Roanl",
         feature_dict={}
     )
 

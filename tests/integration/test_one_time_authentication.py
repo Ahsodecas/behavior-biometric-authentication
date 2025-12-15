@@ -5,7 +5,7 @@ import pandas as pd
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 from src.ml.data_preprocessor import DataPreprocessor
 from src.ml.model_trainer import ModelTrainer
-import src.gui.constants as constants
+import src.constants as constants
 
 
 @pytest.mark.integration

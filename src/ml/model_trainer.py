@@ -84,7 +84,9 @@ class ModelTrainer:
         print("Training on", self.device)
 
         for epoch in range(1, epochs + 1):
+            print("[MODEL TRAINER] Training on epoch", epoch)
             self.model.train()
+            print("[MODEL TRAINER] Called model training")
             total_loss = 0
 
             for A, P, N, L in self.train_loader:

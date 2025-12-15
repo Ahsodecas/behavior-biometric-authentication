@@ -78,9 +78,9 @@ class DataUtility:
     def set_username(self, username: str):
         self.data_collector.set_username(username=username)
         self.feature_extractor.set_username(username=username)
+        self.synthetic_features_generator_genuine_user.set_username(username=username)
         self.feature_extractor_imposter_users.set_username(username=username)
         self.synthetic_features_generator_imposter_users.set_username(username=username)
-        self.synthetic_features_generator_genuine_user.set_username(username=username)
 
     def save_raw_csv(self, filename=None):
         self.data_collector.save_key_raw_csv(filename)

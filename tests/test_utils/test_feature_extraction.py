@@ -103,13 +103,37 @@ def extractor(tmp_path):
 
 
 def test_generate_required_features_order_and_content(extractor):
-    feats = extractor.generate_required_features("aB")
+    feats = extractor.generate_required_features()
 
     assert feats == [
-        "H.a",
-        "DD.a.Shift.b",
-        "UD.a.Shift.b",
-        "H.Shift.b",
+         'H..',
+         'DD...t',
+         'UD...t',
+         'H.t',
+         'DD.t.i',
+         'UD.t.i',
+         'H.i',
+         'DD.i.e',
+         'UD.i.e',
+         'H.e',
+         'DD.e.5',
+         'UD.e.5',
+         'H.5',
+         'DD.5.Shift.r',
+         'UD.5.Shift.r',
+         'H.Shift.r',
+         'DD.Shift.r.o',
+         'UD.Shift.r.o',
+         'H.o',
+         'DD.o.a',
+         'UD.o.a',
+         'H.a',
+         'DD.a.n',
+         'UD.a.n',
+         'H.n',
+         'DD.n.l',
+         'UD.n.l',
+         'H.l'
     ]
 
 

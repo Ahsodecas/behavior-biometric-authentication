@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from src.ml.data_preprocessor import DataPreprocessor
+from src.ml.model_trainer import ModelTrainer
 
 
 class TrainingWorker(QThread):

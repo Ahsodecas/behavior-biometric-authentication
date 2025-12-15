@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
     QHBoxLayout, QFrame
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
+
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
 from numpy.f2py.crackfortran import usermodules
 
@@ -33,9 +33,7 @@ from src.ml.model_trainer import ModelTrainer
 #  CONSTANTS & GLOBAL CONFIG
 # =====================================================================
 
-import src.gui.constants as constants
-
-
+import src.constants as constants
 
 # =====================================================================
 #  MAIN AUTHENTICATION WINDOW CLASS
@@ -63,7 +61,7 @@ class AuthenticationWindow(QWidget):
 
             # ---------------- Core helpers ----------------
             self.data_utility = DataUtility()
-            self.authenticator = AuthenticationDecisionMaker(threshold=0.3)
+            self.authenticator = AuthenticationDecisionMaker(threshold=0.1)
 
             # UI setup
             self.setup_layout()
@@ -167,7 +165,7 @@ class AuthenticationWindow(QWidget):
             self.authenticator.username = username
             self.data_utility.set_username(username)
             self.mode = "authentication"
-            self.authenticator.load_model(model_path, username=username, training_csv=f"datasets/{username}_training.csv")
+            self.authenticator.load_model(model_path, username=username, training_csv=f"{self.username}_training.csv")
             self.setup_authentication_mode()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred during login:\n{str(e)}")
@@ -204,6 +202,7 @@ class AuthenticationWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Setup Error", str(e))
 
+
     def submit_enrollment_sample(self):
         password = self.password_entry.text()
         username = self.username_entry.text()
@@ -215,10 +214,11 @@ class AuthenticationWindow(QWidget):
                 self.data_utility.reset()
                 return
 
+            self.username = username
             if password != constants.PASSWORD:
                 QMessageBox.warning(self, "Enrollment", "Password does not match.")
                 self.password_entry.clear()
-                self.data_utility.reset()
+                self.data_utility.reset(failed=True)
                 return
 
             self.data_utility.set_username(username)
@@ -460,7 +460,7 @@ class AuthenticationWindow(QWidget):
 
             try:
                 self.username = username
-                self.data_utility.set_username(username)
+                self.data_utility.set_username(username=username)
                 self.data_utility.extract_features(username)
                 features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_raw_csv(filename="raw.csv")
@@ -519,7 +519,9 @@ class AuthenticationWindow(QWidget):
             elif text == "Authentication":
                 self.mode = "authentication"
                 try:
-                    self.authenticator.load_model(os.path.join(constants.PATH_MODELS, f"{self.username}_snn.pt"), username=self.username, training_csv=f"datasets/{self.username}_training.csv")
+                    self.authenticator.load_model(os.path.join(constants.PATH_MODELS, f"{self.username}_snn.pt"),
+                                                  username=self.username,
+                                                  training_csv=f"{self.username}_training.csv")
                 except Exception as e:
                     QMessageBox.critical(self, "Model load failed", str(e))
                     return

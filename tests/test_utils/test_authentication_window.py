@@ -30,8 +30,6 @@ def test_submit_enrollment_success(window):
 
 
 def test_submit_enrollment_wrong_password(window):
-    window.password_entry.setText("incorrect")
-
     window.submit_enrollment_sample()
 
     window.data_utility.extract_features.assert_not_called()

@@ -7,7 +7,7 @@ from src.ml.snn_model import TripletSNN
 from src.ml.triplet_dataset import CMUDatasetTriplet
 import pandas as pd
 
-import src.gui.constants as constants
+import src.constants as constants
 
 class AuthenticationDecisionMaker:
     """
@@ -16,8 +16,7 @@ class AuthenticationDecisionMaker:
     The GUI should only call authenticator.authenticate().
     """
 
-    def __init__(self, username=None, password_fixed=".tie5Roanl", threshold=0.1):
-        self.password_fixed = password_fixed
+    def __init__(self, username=None, threshold=0.4):
         self.username = username
         self.threshold = threshold
 
@@ -37,10 +36,17 @@ class AuthenticationDecisionMaker:
         if not os.path.exists(ckpt_path):
             raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
 
-        if not os.path.exists(training_csv):
+        # -------------------------------
+        # Load TRAINING dataset to recover
+        #   - scaler
+        #   - feature columns
+        # -------------------------------
+        training_csv_path = os.path.join(constants.PATH_DATASETS, training_csv)
+        if not os.path.exists(training_csv_path):
             raise FileNotFoundError(f"Training CSV not found: {training_csv}")
 
-        tmp_dataset = CMUDatasetTriplet(training_csv)
+        tmp_dataset = CMUDatasetTriplet(training_csv_path)
+
         input_dim = tmp_dataset.X.shape[1]
 
         self.scaler = tmp_dataset.scaler
@@ -50,7 +56,8 @@ class AuthenticationDecisionMaker:
         # Load CSV again (unscaled) so we
         # can filter by subject/generated
         # -------------------------------
-        df = pd.read_csv(training_csv)
+
+        df = pd.read_csv(training_csv_path)
 
         # Filter reference samples:
         ref_df = df[(df["subject"] == username) & (df["generated"] == 0)]
@@ -131,7 +138,7 @@ class AuthenticationDecisionMaker:
         """
 
         # password check
-        if password != self.password_fixed:
+        if password != constants.PASSWORD:
             return False, float("inf"), "Incorrect password."
 
         # Ensure model loaded

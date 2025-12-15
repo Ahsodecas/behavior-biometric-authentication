@@ -3,8 +3,8 @@ import time
 import csv
 import json
 import pandas as pd
-from datetime import datetime
 from src.utils.extracted_features import ExtractedFeatures
+import src.constants as constants
 
 
 class FeatureExtractor:
@@ -29,14 +29,15 @@ class FeatureExtractor:
 
         self.create_features_directory()
 
-        self.feature_cols = self.generate_required_features(".tie5Roanl")
+        self.feature_cols = self.generate_required_features()
 
-    def generate_required_features(self, password: str):
+    def generate_required_features(self):
         """
         Generates names in this order:
         H.k1, DD.k1.k2, UD.k1.k2, H.k2, DD.k2.k3, UD.k2.k3, ..., H.last
         Handles Shift: if char is uppercase, treat it as Shift.<lower>
         """
+        password = constants.PASSWORD
         keys = []
         for ch in password:
             if ch.isupper():
@@ -87,9 +88,9 @@ class FeatureExtractor:
             })
 
         # --- build token list from password (automatic) ---
-        PASSWORD = ".tie5Roanl"
+        password = constants.PASSWORD  # keep this here or read from config
         tokens = []
-        for ch in PASSWORD:
+        for ch in password:
             if ch.isupper():
                 tokens.append(f"Shift.{ch.lower()}")
             else:
@@ -290,7 +291,7 @@ class FeatureExtractor:
 
                 writer.writerow(row)
 
-            print(f"Features saved to: {filename}")
+            # print(f"Features saved to: {filename}")
             return True
 
         except Exception as e:
