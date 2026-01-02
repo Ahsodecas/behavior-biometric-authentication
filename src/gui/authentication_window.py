@@ -707,6 +707,8 @@ class AuthenticationWindow(QWidget):
             dataset_root = "datasets/sapimouse"
             model_out_dir = constants.PATH_MODELS
 
+            print(f"[DEBUG] PATH EXTRACTED IN AUTH WINDOW : {enrollment_csv}")
+
             trainer = MouseModelTrainer(
                 enrollment_csv=enrollment_csv,
                 username=self.username,

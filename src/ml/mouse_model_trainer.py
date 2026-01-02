@@ -12,6 +12,7 @@ import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import Conv1D, MaxPooling1D, Dense, Dropout, Flatten
 from keras.optimizers import Adam
+import src.constants as constants
 
 # =====================================================================
 #  MouseModelTrainer Class
@@ -34,7 +35,7 @@ class MouseModelTrainer:
         self.username = username
         self.enrollment_csv = enrollment_csv
         self.dataset_root = dataset_root
-        self.out_dir = out_dir
+        self.out_dir = constants.PATH_MODELS
         self.window_size = window_size
         self.step_size = step_size
         self.test_size = test_size
