@@ -68,7 +68,7 @@ class BackgroundAuthManager(QObject):
     # =========================
     # Collection + Authentication
     # =========================
-    def _collect_data_for_duration(self, duration_minutes=3):
+    def _collect_data_for_duration(self, duration_minutes=1):
         if self._stop_event.is_set():
             return
 
@@ -111,9 +111,9 @@ class BackgroundAuthManager(QObject):
             return False, 0.0
 
         signal = self._compute_velocity(df)
-        norm_metrics_path = os.path.join(constants.PATH_EXTRACTED, f"{self.username}", f"{self.username}_mouse_norm_metrics.npy")
-        mu, sigma = np.load(norm_metrics_path, allow_pickle=True)
-        signal = (signal - mu) / sigma
+        mu_s = signal.mean(axis=0)
+        sigma_s = signal.std(axis=0) + 1e-6
+        signal = (signal - mu_s) / sigma_s
 
         windows = self._create_windows(
             signal,
@@ -125,10 +125,27 @@ class BackgroundAuthManager(QObject):
             return False, 0.0
 
         scores = self.model.predict(windows, verbose=0).ravel()
-        mean_score = scores.mean()
 
-        accepted = mean_score >= self.DECISION_THRESHOLD
-        return accepted, float(mean_score)
+        print(
+            scores.min(),
+            np.percentile(scores, 10),
+            scores.mean(),
+            np.percentile(scores, 90),
+            scores.max()
+        )
+        # mean_score = scores.mean()
+        # accepted = mean_score >= self.DECISION_THRESHOLD
+
+        threshold = self.DECISION_THRESHOLD
+        # vote_ratio = (scores >= threshold).mean()
+        #
+        # accepted = vote_ratio >= 0.7
+        # return accepted, float(vote_ratio)
+
+        aggregated_score = np.percentile(scores, 20)
+        accepted = aggregated_score >= self.DECISION_THRESHOLD
+
+        return accepted, float(aggregated_score)
 
     # =========================
     # Feature Engineering

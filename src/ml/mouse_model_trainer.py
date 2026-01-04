@@ -104,9 +104,9 @@ class MouseModelTrainer:
         # --- Positive samples from enrollment CSV ---
         df_pos = self.load_csv(self.enrollment_csv)
         signal_pos = self.compute_velocity(df_pos)
-        mu = signal_pos.mean(axis=0)
-        sigma = signal_pos.std(axis=0) + 1e-6
-        signal_pos = (signal_pos - mu) / sigma
+        mu_pos = signal_pos.mean(axis=0)
+        sigma_pos = signal_pos.std(axis=0) + 1e-6
+        signal_pos = (signal_pos - mu_pos) / sigma_pos
         X_pos = self.create_windows(signal_pos)
 
         # --- Negative samples from other users in dataset ---
@@ -122,7 +122,10 @@ class MouseModelTrainer:
             if df_neg.empty:
                 continue
             signal_neg = self.compute_velocity(df_neg)
-            signal_neg = (signal_neg - mu) / sigma
+
+            mu_neg = signal_neg.mean(axis=0)
+            sigma_neg = signal_neg.std(axis=0) + 1e-6
+            signal_neg = (signal_neg - mu_neg) / sigma_neg
 
             windows = self.create_windows(signal_neg)
             X_neg.append(windows)
@@ -137,9 +140,6 @@ class MouseModelTrainer:
         X = np.vstack([X_pos, X_neg])
         y = np.array([1]*len(X_pos) + [0]*len(X_neg))
 
-        norm_metrics_path = os.path.join(constants.PATH_EXTRACTED, f"{self.username}", f"{self.username}_mouse_norm_metrics.npy")
-        np.save(norm_metrics_path, [mu, sigma])
-
         # Train/test split
         return train_test_split(
             X, y,
@@ -153,13 +153,13 @@ class MouseModelTrainer:
     # -----------------------
     def build_model(self):
         self.model = Sequential([
-            Conv1D(64, kernel_size=5, activation="relu", input_shape=(self.window_size, 2)),
+            Conv1D(16, kernel_size=5, activation="relu", input_shape=(self.window_size, 2)),
             MaxPooling1D(2),
-            Conv1D(128, kernel_size=5, activation="relu"),
+            Conv1D(32, kernel_size=5, activation="relu"),
             MaxPooling1D(2),
             Flatten(),
-            Dense(128, activation="relu"),
-            Dropout(0.5),
+            Dense(32, activation="relu"),
+            Dropout(0.7),
             Dense(1, activation="sigmoid")
         ])
         self.model.compile(
