@@ -48,7 +48,18 @@ class AuthenticationWindow(QWidget):
     def __init__(self):
         try:
             super().__init__()
-            self.setWindowTitle("Authentication App")
+            # Window appearance
+            self.setWindowFlags(
+                Qt.FramelessWindowHint | Qt.Window
+            )
+
+            self.setAttribute(Qt.WA_TranslucentBackground)
+
+            # Full screen
+            self.showFullScreen()
+
+
+            #self.setWindowTitle("Authentication App")
 
             # ---------------- State ----------------
             self.mode = "landing"  # landing | enrollment | training | authentication
@@ -982,24 +993,36 @@ class AuthenticationWindow(QWidget):
 
 
     def setup_layout(self):
+
+        self.setStyleSheet("""
+            AuthenticationWindow {
+                background-color: rgba(0, 0, 0, 0);
+            }
+        """)
         self.layout = QVBoxLayout(self)
         self.layout.setAlignment(Qt.AlignCenter)
         self.layout.setSpacing(20)
         self.setLayout(self.layout)
 
-
     def center_on_screen(self):
+        if self.isFullScreen():
+            return
         frame = self.frameGeometry()
         screen = QApplication.primaryScreen().availableGeometry().center()
         frame.moveCenter(screen)
         self.move(frame.topLeft())
-
 
     def make_card(self):
         card = QFrame()
         card.setObjectName("card")
         card.setMinimumWidth(600)
         card.setMinimumHeight(400)
+        card.setStyleSheet("""
+            QFrame#card {
+                background-color: white;
+                border-radius: 16px;
+            }
+        """)
         return card
 
 
