@@ -187,11 +187,23 @@ class MouseModelTrainer:
         auc = roc_auc_score(y_test, y_scores)
         print(f"ROC AUC (authentication performance): {auc:.4f}")
 
+        imposter_scores = y_scores[y_test == 0]
+        self.calculate_threshold(imposter_scores)
+
         # Save model
         model_path = os.path.join(self.out_dir, f"{self.username}_cnn_model.keras")
         self.model.save(model_path)
         print(f"Model saved to {model_path}")
         return model_path, auc
+
+    def calculate_threshold(self, imposter_scores):
+        threshold = np.percentile(imposter_scores, 100 * (1 - constants.TARGET_FAR))
+
+        threshold_path = os.path.join(
+            constants.PATH_MODELS,
+            f"{self.username}_mouse_threshold.npy"
+        )
+        np.save(threshold_path, threshold)
 
 
 # =====================================================================
