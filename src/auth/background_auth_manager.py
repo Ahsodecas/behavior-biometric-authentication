@@ -7,7 +7,7 @@ import pandas as pd
 import tensorflow as tf
 from threading import Event, Thread
 from PyQt5.QtCore import QObject, pyqtSignal
-
+import src.constants as constants
 from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 
@@ -68,7 +68,7 @@ class BackgroundAuthManager(QObject):
     # =========================
     # Collection + Authentication
     # =========================
-    def _collect_data_for_duration(self, duration_minutes=0.5):
+    def _collect_data_for_duration(self, duration_minutes=3):
         if self._stop_event.is_set():
             return
 
@@ -111,6 +111,10 @@ class BackgroundAuthManager(QObject):
             return False, 0.0
 
         signal = self._compute_velocity(df)
+        norm_metrics_path = os.path.join(constants.PATH_EXTRACTED, f"{self.username}", f"{self.username}_mouse_norm_metrics.npy")
+        mu, sigma = np.load(norm_metrics_path, allow_pickle=True)
+        signal = (signal - mu) / sigma
+
         windows = self._create_windows(
             signal,
             self.WINDOW_SIZE,

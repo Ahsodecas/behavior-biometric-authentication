@@ -704,10 +704,8 @@ class AuthenticationWindow(QWidget):
             self.mouse_training_status.setText("Mouse model training in progress... Please wait.")
 
             enrollment_csv = os.path.join(constants.PATH_EXTRACTED, self.username, "mouse_enrollement.csv")
-            dataset_root = "datasets/sapimouse"
+            dataset_root = os.path.join(constants.PATH_DATASETS, "sapimouse")
             model_out_dir = constants.PATH_MODELS
-
-            print(f"[DEBUG] PATH EXTRACTED IN AUTH WINDOW : {enrollment_csv}")
 
             trainer = MouseModelTrainer(
                 enrollment_csv=enrollment_csv,
@@ -860,7 +858,7 @@ class AuthenticationWindow(QWidget):
                 username=self.username,
                 data_utility=self.data_utility,
                 authenticator_model_path=os.path.join(
-                    constants.PATH_MODELS, f"ksenia_cnn_mouse_working.keras"
+                    constants.PATH_MODELS, f"{self.username}_cnn_model.keras"
                 ),
             )
 

@@ -22,8 +22,8 @@ class MouseModelTrainer:
         self,
         enrollment_csv: str,
         username: str,
-        dataset_root: str = "datasets/sapimouse",
-        out_dir: str = "models",
+        dataset_root: str = os.path.join(constants.PATH_DATASETS, "sapimouse"),
+        out_dir: str = constants.PATH_MODELS,
         window_size: int = 128,
         step_size: int = 64,
         test_size: float = 0.2,
@@ -35,7 +35,8 @@ class MouseModelTrainer:
         self.username = username
         self.enrollment_csv = enrollment_csv
         self.dataset_root = dataset_root
-        self.out_dir = constants.PATH_MODELS
+        self.window_size = window_size
+        self.out_dir = out_dir
         self.window_size = window_size
         self.step_size = step_size
         self.test_size = test_size
@@ -103,7 +104,9 @@ class MouseModelTrainer:
         # --- Positive samples from enrollment CSV ---
         df_pos = self.load_csv(self.enrollment_csv)
         signal_pos = self.compute_velocity(df_pos)
-        signal_pos = (signal_pos - signal_pos.mean(axis=0)) / (signal_pos.std(axis=0) + 1e-6)
+        mu = signal_pos.mean(axis=0)
+        sigma = signal_pos.std(axis=0) + 1e-6
+        signal_pos = (signal_pos - mu) / sigma
         X_pos = self.create_windows(signal_pos)
 
         # --- Negative samples from other users in dataset ---
@@ -119,7 +122,8 @@ class MouseModelTrainer:
             if df_neg.empty:
                 continue
             signal_neg = self.compute_velocity(df_neg)
-            signal_neg = (signal_neg - signal_neg.mean(axis=0)) / (signal_neg.std(axis=0) + 1e-6)
+            signal_neg = (signal_neg - mu) / sigma
+
             windows = self.create_windows(signal_neg)
             X_neg.append(windows)
 
@@ -132,6 +136,9 @@ class MouseModelTrainer:
 
         X = np.vstack([X_pos, X_neg])
         y = np.array([1]*len(X_pos) + [0]*len(X_neg))
+
+        norm_metrics_path = os.path.join(constants.PATH_EXTRACTED, f"{self.username}", f"{self.username}_mouse_norm_metrics.npy")
+        np.save(norm_metrics_path, [mu, sigma])
 
         # Train/test split
         return train_test_split(
