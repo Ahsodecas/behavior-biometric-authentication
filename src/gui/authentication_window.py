@@ -1390,6 +1390,14 @@ class AuthenticationWindow(QWidget):
         self.logs_view.setPlaceholderText("User activity logs will appear here...")
         self.logs_view.setMinimumHeight(250)
 
+        self.logs_view.setFixedHeight(90)
+
+        # Prevent vertical expansion
+        self.logs_view.setSizePolicy(
+            QSizePolicy.Expanding,  # horizontal
+            QSizePolicy.Fixed  # vertical
+        )
+
         # Make background transparent and inherit font
         self.logs_view.setStyleSheet("""
             background: transparent;
