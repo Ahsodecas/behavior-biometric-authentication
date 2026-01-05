@@ -1178,6 +1178,34 @@ class AuthenticationWindow(QWidget):
         """Check if a superuser is already created."""
         return self.user_management_utility.get_superuser() is not None
 
+    class SuperuserDialog(QDialog):
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle("Create Superuser")
+
+            self.layout = QVBoxLayout()
+
+            self.username_label = QLabel("Username")
+            self.username_input = QLineEdit()
+            self.layout.addWidget(self.username_label)
+            self.layout.addWidget(self.username_input)
+
+            self.password_label = QLabel("Password")
+            self.password_input = QLineEdit()
+            self.password_input.setEchoMode(QLineEdit.Password)
+            self.layout.addWidget(self.password_label)
+            self.layout.addWidget(self.password_input)
+
+            self.submit_btn = QPushButton("Create Superuser")
+            self.submit_btn.setProperty("class", "primary")
+            self.submit_btn.clicked.connect(self.accept)
+            self.layout.addWidget(self.submit_btn)
+
+            self.setLayout(self.layout)
+
+        def get_credentials(self):
+            return self.username_input.text(), self.password_input.text()
+
     def handle_login_superuser(self):
         """
         Step 1: Prompt user to enter a username for superuser login.
