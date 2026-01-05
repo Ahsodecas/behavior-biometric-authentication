@@ -362,8 +362,8 @@ class AuthenticationWindow(QWidget):
                     "Enrollment Complete",
                     f"Collected {self.enroll_target} samples."
                 )
-            self.logger.log(self.username, "Completed keyboard data enrollment")
-            self.on_mode_changed("Training")
+                self.logger.log(self.username, "Completed keyboard data enrollment")
+                self.on_mode_changed("Training")
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
 
@@ -507,15 +507,15 @@ class AuthenticationWindow(QWidget):
         top_row.addStretch()
         card_layout.addLayout(top_row)
 
-        #urow = QHBoxLayout()
-        #self.username_label = QLabel("Username:")
-        #self.username_label.setProperty("class", "field-label")
-        #urow.addWidget(self.username_label, alignment=Qt.AlignVCenter)
+        urow = QHBoxLayout()
+        self.username_label = QLabel("Username:")
+        self.username_label.setProperty("class", "field-label")
+        urow.addWidget(self.username_label, alignment=Qt.AlignVCenter)
 
-        #self.username_entry = QLineEdit()
-        #self.username_entry.setPlaceholderText("Enter your username")
-        #urow.addWidget(self.username_entry)
-        #card_layout.addLayout(urow)
+        self.username_entry = QLineEdit()
+        self.username_entry.setPlaceholderText("Enter your username")
+        urow.addWidget(self.username_entry)
+        card_layout.addLayout(urow)
 
         prow = QHBoxLayout()
         self.password_label = QLabel("Password:")
