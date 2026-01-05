@@ -13,7 +13,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
-    QHBoxLayout, QFrame, QSizePolicy
+    QHBoxLayout, QFrame, QSizePolicy, QDialog, QMainWindow, QTextEdit
 )
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
@@ -28,6 +28,8 @@ from src.utils.data_utility import DataUtility
 from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 from src.auth.background_auth_manager import BackgroundAuthManager
 from src.ml.model_trainer import ModelTrainer
+from src.utils.user_management_utility import UserManagementUtility
+from src.utils.logger import Logger
 
 
 # =====================================================================
@@ -74,6 +76,14 @@ class AuthenticationWindow(QWidget):
             # ---------------- Core helpers ----------------
             self.data_utility = DataUtility()
             self.authenticator = AuthenticationDecisionMaker(threshold=0.1)
+            self.user_management_utility = UserManagementUtility()
+            self.logger = Logger()
+
+            if not self.superuser_exists():
+                dialog = self.SuperuserDialog()
+                if dialog.exec_() == QDialog.Accepted:
+                    username, password = dialog.get_credentials()
+                    self.user_management_utility.create_superuser(username, password)
 
             # UI setup
             self.setup_layout()
@@ -130,9 +140,14 @@ class AuthenticationWindow(QWidget):
         register_btn.setProperty("class", "secondary")
         register_btn.clicked.connect(self.handle_register)
 
+        superuser_btn = QPushButton("Login Superuser")
+        superuser_btn.setProperty("class", "secondary")
+        superuser_btn.clicked.connect(self.handle_login_superuser)
+
         btn_row.addStretch()
         btn_row.addWidget(login_btn)
         btn_row.addWidget(register_btn)
+        btn_row.addWidget(superuser_btn)
         btn_row.addStretch()
 
         layout.addLayout(btn_row)
@@ -255,6 +270,7 @@ class AuthenticationWindow(QWidget):
             return
 
         constants.PASSWORD = pwd1
+        self.user_management_utility.create_local_user(self.username, pwd1)
 
         QMessageBox.information(self, "Password Set", "Password saved successfully.")
 
@@ -333,8 +349,8 @@ class AuthenticationWindow(QWidget):
                     "Enrollment Complete",
                     f"Collected {self.enroll_target} samples."
                 )
-                self.on_mode_changed("Training")
-
+            self.logger.log(self.username, "Completed keyboard data enrollment")
+            self.on_mode_changed("Training")
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
 
@@ -351,6 +367,7 @@ class AuthenticationWindow(QWidget):
         try:
             self.data_utility.load_csv_key_features(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
+            self.logger.log(self.username, f"Successfully loaded features from {file_path}.")
             self.on_mode_changed("Training")
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
@@ -441,6 +458,7 @@ class AuthenticationWindow(QWidget):
         self.training_status.setText("Training finished.")
         self.train_button.setEnabled(False)
         QMessageBox.information(self, "Training", "Model training finished successfully.")
+        self.logger.log(self.username, f"Model training finished successfully.")
         self.on_mode_changed("Mouse Enrollment")
 
     def on_data_processing_finished(self):
@@ -553,6 +571,7 @@ class AuthenticationWindow(QWidget):
 
             if success:
                 QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                self.logger.log(self.username, f"Authentication successful with distance = {dist:.4f}")
                 try: self.switch_to_background_mode()
                 except Exception as e:
                     QMessageBox.critical(self, "Background Mode Error", str(e))
@@ -561,6 +580,7 @@ class AuthenticationWindow(QWidget):
                 self.password_entry.clear()
             else:
                 QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                self.logger.log(self.username, f"Authentication failed with distance = {dist:.4f}")
 
                 self.data_utility.reset(failed=True)
                 self.password_entry.clear()
@@ -908,8 +928,6 @@ class AuthenticationWindow(QWidget):
                 self.bg_window.close()
                 self.bg_window = None
 
-
-
             self.setup_authentication_mode()
             self.show()
 
@@ -1128,3 +1146,278 @@ class AuthenticationWindow(QWidget):
 
         btn_row.addStretch()
         card_layout.addLayout(btn_row)
+
+    # =================================================================
+    #  SUPERUSER COMPONENTS
+    # =================================================================
+
+    def superuser_exists(self):
+        """Check if a superuser is already created."""
+        return self.user_management_utility.get_superuser() is not None
+
+    class SuperuserDialog(QDialog):
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle("Create Superuser")
+
+            self.layout = QVBoxLayout()
+
+            self.username_label = QLabel("Username")
+            self.username_input = QLineEdit()
+            self.layout.addWidget(self.username_label)
+            self.layout.addWidget(self.username_input)
+
+            self.password_label = QLabel("Password")
+            self.password_input = QLineEdit()
+            self.password_input.setEchoMode(QLineEdit.Password)
+            self.layout.addWidget(self.password_label)
+            self.layout.addWidget(self.password_input)
+
+            self.submit_btn = QPushButton("Create Superuser")
+            self.submit_btn.setProperty("class", "primary")
+            self.submit_btn.clicked.connect(self.accept)
+            self.layout.addWidget(self.submit_btn)
+
+            self.setLayout(self.layout)
+
+        def get_credentials(self):
+            return self.username_input.text(), self.password_input.text()
+
+    def handle_login_superuser(self):
+        """
+        Step 1: Prompt user to enter a username for superuser login.
+        Then redirect to password input page.
+        """
+        username = self.username_entry.text().strip()
+        if not username:
+            QMessageBox.warning(self, "Login Superuser", "Please enter a username")
+            return
+
+        # Check if superuser exists with this username
+        superuser = self.user_management_utility.get_superuser()
+        if not superuser or superuser['username'] != username:
+            QMessageBox.warning(self, "Login Superuser", "No superuser found with this username")
+            return
+
+        # Store username temporarily
+        self.username = username
+
+        # Redirect to password page
+        self.setup_superuser_password_page()
+
+    def setup_superuser_password_page(self):
+        """
+        Step 2: Show page to enter superuser password.
+        """
+        self.clear_layout()
+        self.resize(700, 400)
+        self.center_on_screen()
+
+        card = self.make_card()
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(16)
+
+        # Title
+        title = QLabel("Superuser Login")
+        title.setProperty("class", "title")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        # Subtitle
+        subtitle = QLabel("Enter the superuser password")
+        subtitle.setProperty("class", "instr")
+        subtitle.setAlignment(Qt.AlignCenter)
+        layout.addWidget(subtitle)
+
+        # Password input
+        self.superuser_password_entry = QLineEdit()
+        self.superuser_password_entry.setEchoMode(QLineEdit.Password)
+        self.superuser_password_entry.setPlaceholderText("Enter password")
+        layout.addWidget(self.superuser_password_entry)
+
+        # Buttons
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+
+        login_btn = QPushButton("Login")
+        login_btn.setProperty("class", "primary")
+        login_btn.clicked.connect(self.authenticate_superuser)
+        btn_row.addWidget(login_btn)
+
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setProperty("class", "secondary")
+        cancel_btn.clicked.connect(self.setup_landing_page)
+        btn_row.addWidget(cancel_btn)
+
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        self.layout.addStretch()
+        self.layout.addWidget(card, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
+
+    def authenticate_superuser(self):
+        """
+        Check if entered password matches the superuser password.
+        Redirect to dashboard if successful.
+        """
+        password = self.superuser_password_entry.text()
+        superuser = self.user_management_utility.get_superuser()
+
+        if not superuser:
+            QMessageBox.critical(self, "Error", "No superuser found")
+            return
+
+        if self.user_management_utility.verify_superuser(self.username, password):
+            QMessageBox.information(self, "Superuser Login", "Authentication successful!")
+            self.setup_superuser_dashboard()
+        else:
+            QMessageBox.critical(self, "Superuser Login", "Incorrect password.")
+            self.superuser_password_entry.clear()
+
+    def setup_superuser_dashboard(self):
+        self.clear_layout()
+        self.resize(800, 600)  # slightly taller to fit logs
+        self.center_on_screen()
+
+        card = self.make_card()
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
+
+        # Title
+        title = QLabel(f"Superuser Dashboard - {self.username}")
+        title.setProperty("class", "title")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        # --- Local user and threshold section ---
+        self.local_user = self.user_management_utility.get_local_user_username()
+        self.threshold_file = os.path.join(constants.PATH_MODELS, f"{self.local_user}_mouse_threshold.npy")
+
+        self.user_row = QHBoxLayout()
+        self.user_row.addWidget(QLabel(f"Username: {self.local_user}"))
+
+        # Threshold label or "Unknown"
+        self.threshold_label = QLabel()
+        self.update_threshold_label()
+        self.user_row.addWidget(self.threshold_label)
+
+        # Edit button
+        self.edit_threshold_button = QPushButton("Edit")
+        self.edit_threshold_button.clicked.connect(self.enable_threshold_editing)
+        self.user_row.addWidget(self.edit_threshold_button)
+
+        layout.addLayout(self.user_row)
+
+        # Save button (hidden until editing)
+        self.save_threshold_button = QPushButton("Save")
+        self.save_threshold_button.setVisible(False)
+        self.save_threshold_button.clicked.connect(self.save_new_threshold)
+        layout.addWidget(self.save_threshold_button, alignment=Qt.AlignLeft)
+
+        # Status label
+        self.threshold_status_label = QLabel("")
+        self.threshold_status_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.threshold_status_label)
+
+        # --- Logs view ---
+        logs_title = QLabel("Local User Activity Logs:")
+        logs_title.setProperty("class", "subtitle")
+        layout.addWidget(logs_title)
+
+        self.logs_view = QTextEdit()
+        self.logs_view.setReadOnly(True)
+        layout.addWidget(self.logs_view)
+
+        # Refresh logs button
+        self.refresh_logs_button = QPushButton("Refresh Logs")
+        self.refresh_logs_button.clicked.connect(self.update_logs_view)
+        layout.addWidget(self.refresh_logs_button, alignment=Qt.AlignLeft)
+
+        # Initialize logger
+        self.logger = Logger()  # make sure Logger class is imported
+
+        # Load logs for the first time
+        self.update_logs_view()
+
+        self.layout.addStretch()
+        self.layout.addWidget(card, alignment=Qt.AlignCenter)
+        self.layout.addStretch()
+
+    # --- Helper to refresh logs ---
+    def update_logs_view(self):
+        logs_text = self.logger.get_logs(self.local_user)
+        self.logs_view.setPlainText(logs_text)
+
+    def update_threshold_label(self):
+        """Update the label to show current threshold or unknown"""
+        if os.path.exists(self.threshold_file):
+            try:
+                threshold = np.load(self.threshold_file)[0]
+                self.threshold_label.setText(f"Threshold: {threshold}")
+            except:
+                self.threshold_label.setText("Threshold: unknown")
+        else:
+            self.threshold_label.setText("Threshold: unknown")
+
+    def enable_threshold_editing(self):
+        """Turn the threshold label into editable input"""
+        # Remove label from layout
+        self.user_row.removeWidget(self.threshold_label)
+        self.threshold_label.setParent(None)
+
+        # Replace with QLineEdit
+        self.threshold_entry = QLineEdit()
+        if os.path.exists(self.threshold_file):
+            self.threshold_entry.setText(str(np.load(self.threshold_file)[0]))
+        self.user_row.insertWidget(1, self.threshold_entry)
+
+        # Show Save button
+        self.save_threshold_button.setVisible(True)
+        self.edit_threshold_button.setEnabled(False)
+
+    def save_new_threshold(self):
+        """Save the new threshold and restore label"""
+        try:
+            new_threshold = float(self.threshold_entry.text().strip())
+        except ValueError:
+            QMessageBox.warning(self, "Superuser", "Please enter a valid number")
+            return
+
+        # Save to .npy
+        np.save(self.threshold_file, np.array([new_threshold]))
+        self.threshold_status_label.setText(f"Threshold updated to {new_threshold}")
+
+        # Remove QLineEdit and restore label
+        self.user_row.removeWidget(self.threshold_entry)
+        self.threshold_entry.setParent(None)
+        self.threshold_entry = None
+
+        self.threshold_label = QLabel()
+        self.update_threshold_label()
+        self.user_row.insertWidget(1, self.threshold_label)
+
+        # Restore buttons
+        self.edit_threshold_button.setEnabled(True)
+        self.save_threshold_button.setVisible(False)
+
+    def setup_logs_view(self):
+        """Add a log viewer to the dashboard"""
+        self.logs_view = QTextEdit()
+        self.logs_view.setReadOnly(True)
+        self.logs_view.setPlaceholderText("User activity logs will appear here...")
+        self.layout.addWidget(self.logs_view)
+
+        # Button to refresh logs
+        self.refresh_logs_button = QPushButton("Refresh Logs")
+        self.refresh_logs_button.clicked.connect(self.load_user_logs(self.local_user))
+        self.layout.addWidget(self.refresh_logs_button)
+
+        # Load initial logs
+        self.load_user_logs(self.local_user)
+
+    def load_user_logs(self, username):
+        self.logs_view.setPlainText(self.logger.get_logs(username))
+
