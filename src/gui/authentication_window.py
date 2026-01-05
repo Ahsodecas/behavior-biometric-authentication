@@ -140,14 +140,14 @@ class AuthenticationWindow(QWidget):
         register_btn.setProperty("class", "secondary")
         register_btn.clicked.connect(self.handle_register)
 
-        superuser_btn = QPushButton("Login Superuser")
-        superuser_btn.setProperty("class", "secondary")
-        superuser_btn.clicked.connect(self.handle_login_superuser)
+        #superuser_btn = QPushButton("Login Superuser")
+        #superuser_btn.setProperty("class", "secondary")
+        #superuser_btn.clicked.connect(self.handle_login_superuser)
 
         btn_row.addStretch()
         btn_row.addWidget(login_btn)
         btn_row.addWidget(register_btn)
-        btn_row.addWidget(superuser_btn)
+        #btn_row.addWidget(superuser_btn)
         btn_row.addStretch()
 
         layout.addLayout(btn_row)
@@ -180,6 +180,14 @@ class AuthenticationWindow(QWidget):
                 QMessageBox.warning(self, "Login", "Please enter a username")
                 return
 
+            superuser = self.user_management_utility.get_superuser()
+            if superuser and superuser['username'] == username:
+                # It's a superuser → prompt for superuser password
+                self.username = username
+                self.setup_superuser_password_page()
+                return
+
+            # ---------------- Normal user login ----------------
             model_path = os.path.join(constants.PATH_MODELS, f"{username}_snn.pt")
             if not os.path.exists(model_path):
                 QMessageBox.information(
@@ -193,8 +201,13 @@ class AuthenticationWindow(QWidget):
             self.authenticator.username = username
             self.data_utility.set_username(username)
             self.mode = "authentication"
-            self.authenticator.load_model(model_path, username=username, training_csv=f"{self.username}_training.csv")
+            self.authenticator.load_model(
+                model_path,
+                username=username,
+                training_csv=f"{self.username}_training.csv"
+            )
             self.setup_authentication_mode()
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred during login:\n{str(e)}")
             print(f"handle_login error: {e}")
@@ -494,15 +507,15 @@ class AuthenticationWindow(QWidget):
         top_row.addStretch()
         card_layout.addLayout(top_row)
 
-        urow = QHBoxLayout()
-        self.username_label = QLabel("Username:")
-        self.username_label.setProperty("class", "field-label")
-        urow.addWidget(self.username_label, alignment=Qt.AlignVCenter)
+        #urow = QHBoxLayout()
+        #self.username_label = QLabel("Username:")
+        #self.username_label.setProperty("class", "field-label")
+        #urow.addWidget(self.username_label, alignment=Qt.AlignVCenter)
 
-        self.username_entry = QLineEdit()
-        self.username_entry.setPlaceholderText("Enter your username")
-        urow.addWidget(self.username_entry)
-        card_layout.addLayout(urow)
+        #self.username_entry = QLineEdit()
+        #self.username_entry.setPlaceholderText("Enter your username")
+        #urow.addWidget(self.username_entry)
+        #card_layout.addLayout(urow)
 
         prow = QHBoxLayout()
         self.password_label = QLabel("Password:")
@@ -511,11 +524,12 @@ class AuthenticationWindow(QWidget):
 
         self.password_entry = QLineEdit()
         self.password_entry.setEchoMode(QLineEdit.Password)
-        self.password_entry.setPlaceholderText("Enter your password")
+        self.password_entry.setPlaceholderText(f"Enter your password, {self.username}")
         self.password_entry.installEventFilter(self)
         prow.addWidget(self.password_entry)
         card_layout.addLayout(prow)
 
+        # Buttons row
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
@@ -523,6 +537,15 @@ class AuthenticationWindow(QWidget):
         self.authenticate_button.setProperty("class", "primary")
         self.authenticate_button.clicked.connect(self.authenticate)
         btn_row.addWidget(self.authenticate_button)
+
+        # Go Back button
+        self.back_button = QPushButton("Go Back")
+        self.back_button.setProperty("class", "secondary")
+        self.back_button.clicked.connect(self.setup_landing_page)
+        btn_row.addWidget(self.back_button)
+
+        btn_row.addStretch()
+        card_layout.addLayout(btn_row)
 
         btn_row.addStretch()
         card_layout.addLayout(btn_row)
@@ -1155,34 +1178,6 @@ class AuthenticationWindow(QWidget):
         """Check if a superuser is already created."""
         return self.user_management_utility.get_superuser() is not None
 
-    class SuperuserDialog(QDialog):
-        def __init__(self):
-            super().__init__()
-            self.setWindowTitle("Create Superuser")
-
-            self.layout = QVBoxLayout()
-
-            self.username_label = QLabel("Username")
-            self.username_input = QLineEdit()
-            self.layout.addWidget(self.username_label)
-            self.layout.addWidget(self.username_input)
-
-            self.password_label = QLabel("Password")
-            self.password_input = QLineEdit()
-            self.password_input.setEchoMode(QLineEdit.Password)
-            self.layout.addWidget(self.password_label)
-            self.layout.addWidget(self.password_input)
-
-            self.submit_btn = QPushButton("Create Superuser")
-            self.submit_btn.setProperty("class", "primary")
-            self.submit_btn.clicked.connect(self.accept)
-            self.layout.addWidget(self.submit_btn)
-
-            self.setLayout(self.layout)
-
-        def get_credentials(self):
-            return self.username_input.text(), self.password_input.text()
-
     def handle_login_superuser(self):
         """
         Step 1: Prompt user to enter a username for superuser login.
@@ -1207,13 +1202,32 @@ class AuthenticationWindow(QWidget):
 
     def setup_superuser_password_page(self):
         """
-        Step 2: Show page to enter superuser password.
+        Show page to enter superuser password with transparent background and clean styling.
         """
         self.clear_layout()
         self.resize(700, 400)
         self.center_on_screen()
 
-        card = self.make_card()
+        # Make the main widget transparent
+        self.setStyleSheet("""
+            AuthenticationWindow {
+                background-color: rgba(0, 0, 0, 0);
+            }
+        """)
+
+        card = QFrame()
+        card.setObjectName("card")
+        card.setStyleSheet("""
+            QFrame#card {
+                background-color: white;
+                border-radius: 16px;
+                border: none;
+            }
+        """)
+        card.setMinimumWidth(500)
+        card.setMaximumWidth(600)
+        card.setMinimumHeight(300)
+
         layout = QVBoxLayout(card)
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(16)
@@ -1234,9 +1248,17 @@ class AuthenticationWindow(QWidget):
         self.superuser_password_entry = QLineEdit()
         self.superuser_password_entry.setEchoMode(QLineEdit.Password)
         self.superuser_password_entry.setPlaceholderText("Enter password")
+        self.superuser_password_entry.setStyleSheet("""
+            QLineEdit {
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 8px;
+                font-size: 14px;
+            }
+        """)
         layout.addWidget(self.superuser_password_entry)
 
-        # Buttons
+        # Buttons row
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
@@ -1253,9 +1275,11 @@ class AuthenticationWindow(QWidget):
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
+        # Add card to main layout
         self.layout.addStretch()
         self.layout.addWidget(card, alignment=Qt.AlignCenter)
         self.layout.addStretch()
+        self.setLayout(self.layout)
 
     def authenticate_superuser(self):
         """
@@ -1278,7 +1302,7 @@ class AuthenticationWindow(QWidget):
 
     def setup_superuser_dashboard(self):
         self.clear_layout()
-        self.resize(800, 600)  # slightly taller to fit logs
+        self.resize(800, 600)
         self.center_on_screen()
 
         card = self.make_card()
@@ -1297,15 +1321,19 @@ class AuthenticationWindow(QWidget):
         self.threshold_file = os.path.join(constants.PATH_MODELS, f"{self.local_user}_mouse_threshold.npy")
 
         self.user_row = QHBoxLayout()
-        self.user_row.addWidget(QLabel(f"Username: {self.local_user}"))
+        user_label = QLabel(f"Username: {self.local_user}")
+        user_label.setProperty("class", "field-label")
+        self.user_row.addWidget(user_label)
 
-        # Threshold label or "Unknown"
+        # Threshold label
         self.threshold_label = QLabel()
+        self.threshold_label.setProperty("class", "field-label")
         self.update_threshold_label()
         self.user_row.addWidget(self.threshold_label)
 
         # Edit button
         self.edit_threshold_button = QPushButton("Edit")
+        self.edit_threshold_button.setProperty("class", "secondary")
         self.edit_threshold_button.clicked.connect(self.enable_threshold_editing)
         self.user_row.addWidget(self.edit_threshold_button)
 
@@ -1313,12 +1341,14 @@ class AuthenticationWindow(QWidget):
 
         # Save button (hidden until editing)
         self.save_threshold_button = QPushButton("Save")
+        self.save_threshold_button.setProperty("class", "primary")
         self.save_threshold_button.setVisible(False)
         self.save_threshold_button.clicked.connect(self.save_new_threshold)
         layout.addWidget(self.save_threshold_button, alignment=Qt.AlignLeft)
 
         # Status label
         self.threshold_status_label = QLabel("")
+        self.threshold_status_label.setProperty("class", "status")
         self.threshold_status_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.threshold_status_label)
 
@@ -1329,68 +1359,120 @@ class AuthenticationWindow(QWidget):
 
         self.logs_view = QTextEdit()
         self.logs_view.setReadOnly(True)
+        self.logs_view.setPlaceholderText("User activity logs will appear here...")
+        self.logs_view.setMinimumHeight(250)
+
+        # Make background transparent and inherit font
+        self.logs_view.setStyleSheet("""
+            background: transparent;
+            border: none;
+            font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            color: #2b2b2b;
+        """)
         layout.addWidget(self.logs_view)
 
         # Refresh logs button
         self.refresh_logs_button = QPushButton("Refresh Logs")
+        self.refresh_logs_button.setProperty("class", "secondary")
         self.refresh_logs_button.clicked.connect(self.update_logs_view)
         layout.addWidget(self.refresh_logs_button, alignment=Qt.AlignLeft)
 
-        # Initialize logger
-        self.logger = Logger()  # make sure Logger class is imported
+        # Buttons row: Refresh, Logout, Stop Application
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(16)  # spacing between buttons
 
-        # Load logs for the first time
+        # Logout button
+        self.logout_button = QPushButton("Logout")
+        self.logout_button.setProperty("class", "danger")
+        self.logout_button.clicked.connect(self.logout_superuser)
+        btn_row.addWidget(self.logout_button)
+
+        # Stop application button
+        self.stop_app_button = QPushButton("Stop Authentication")
+        self.stop_app_button.setProperty("class", "danger")
+        self.stop_app_button.clicked.connect(QApplication.instance().quit)
+        btn_row.addWidget(self.stop_app_button)
+
+        # Add stretch to push buttons to the left
+        btn_row.addStretch()
+
+        # Add row to layout
+        layout.addLayout(btn_row)
+
+        # Load logs
         self.update_logs_view()
 
+        # Add card to layout
         self.layout.addStretch()
         self.layout.addWidget(card, alignment=Qt.AlignCenter)
         self.layout.addStretch()
 
-    # --- Helper to refresh logs ---
-    def update_logs_view(self):
-        logs_text = self.logger.get_logs(self.local_user)
-        self.logs_view.setPlainText(logs_text)
+    def logout_superuser(self):
+        """
+        Logs out the superuser and returns to the landing page.
+        """
+        try:
+            # Stop background auth if running
+            if hasattr(self, "bg_manager") and self.bg_manager:
+                try:
+                    self.bg_manager.stop()
+                except Exception:
+                    pass
+                self.bg_manager.deleteLater()
+                self.bg_manager = None
+
+            # Close any background window
+            if hasattr(self, "bg_window") and self.bg_window:
+                self.bg_window.close()
+                self.bg_window = None
+
+            # Clear superuser state
+            self.username = None
+
+            # Clear current layout
+            self.clear_layout()
+
+            # Go back to landing page
+            self.setup_landing_page()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Logout Error", f"Failed to logout:\n{str(e)}")
 
     def update_threshold_label(self):
-        """Update the label to show current threshold or unknown"""
         if os.path.exists(self.threshold_file):
             try:
                 threshold = np.load(self.threshold_file)[0]
                 self.threshold_label.setText(f"Threshold: {threshold}")
-            except:
+            except Exception:
                 self.threshold_label.setText("Threshold: unknown")
         else:
             self.threshold_label.setText("Threshold: unknown")
 
+        self.threshold_label.setProperty("class", "field-label")
+
     def enable_threshold_editing(self):
-        """Turn the threshold label into editable input"""
-        # Remove label from layout
         self.user_row.removeWidget(self.threshold_label)
         self.threshold_label.setParent(None)
 
-        # Replace with QLineEdit
         self.threshold_entry = QLineEdit()
         if os.path.exists(self.threshold_file):
             self.threshold_entry.setText(str(np.load(self.threshold_file)[0]))
         self.user_row.insertWidget(1, self.threshold_entry)
 
-        # Show Save button
         self.save_threshold_button.setVisible(True)
         self.edit_threshold_button.setEnabled(False)
 
     def save_new_threshold(self):
-        """Save the new threshold and restore label"""
         try:
             new_threshold = float(self.threshold_entry.text().strip())
         except ValueError:
             QMessageBox.warning(self, "Superuser", "Please enter a valid number")
             return
 
-        # Save to .npy
         np.save(self.threshold_file, np.array([new_threshold]))
         self.threshold_status_label.setText(f"Threshold updated to {new_threshold}")
 
-        # Remove QLineEdit and restore label
+        # Restore label
         self.user_row.removeWidget(self.threshold_entry)
         self.threshold_entry.setParent(None)
         self.threshold_entry = None
@@ -1399,24 +1481,12 @@ class AuthenticationWindow(QWidget):
         self.update_threshold_label()
         self.user_row.insertWidget(1, self.threshold_label)
 
-        # Restore buttons
         self.edit_threshold_button.setEnabled(True)
         self.save_threshold_button.setVisible(False)
 
-    def setup_logs_view(self):
-        """Add a log viewer to the dashboard"""
-        self.logs_view = QTextEdit()
-        self.logs_view.setReadOnly(True)
-        self.logs_view.setPlaceholderText("User activity logs will appear here...")
-        self.layout.addWidget(self.logs_view)
-
-        # Button to refresh logs
-        self.refresh_logs_button = QPushButton("Refresh Logs")
-        self.refresh_logs_button.clicked.connect(self.load_user_logs(self.local_user))
-        self.layout.addWidget(self.refresh_logs_button)
-
-        # Load initial logs
-        self.load_user_logs(self.local_user)
+    def update_logs_view(self):
+        logs_text = self.logger.get_logs(self.local_user)
+        self.logs_view.setPlainText(logs_text)
 
     def load_user_logs(self, username):
         self.logs_view.setPlainText(self.logger.get_logs(username))
