@@ -2,7 +2,7 @@ import os
 
 import torch
 from PyQt5.QtWidgets import QApplication
-from gui.authentication_window import AuthenticationWindow
+from src.gui.authentication_window import AuthenticationWindow
 import sys
 
 def main():
