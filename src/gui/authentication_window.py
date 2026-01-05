@@ -13,7 +13,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QMessageBox, QFileDialog, QComboBox,
-    QHBoxLayout, QFrame, QSizePolicy, QDialog, QMainWindow
+    QHBoxLayout, QFrame, QSizePolicy, QDialog, QMainWindow, QTextEdit
 )
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent, QTimer
@@ -29,6 +29,7 @@ from src.auth.authentication_decision_maker import AuthenticationDecisionMaker
 from src.auth.background_auth_manager import BackgroundAuthManager
 from src.ml.model_trainer import ModelTrainer
 from src.utils.user_management_utility import UserManagementUtility
+from src.utils.logger import Logger
 
 
 # =====================================================================
@@ -65,6 +66,7 @@ class AuthenticationWindow(QWidget):
             self.data_utility = DataUtility()
             self.authenticator = AuthenticationDecisionMaker(threshold=0.1)
             self.user_management_utility = UserManagementUtility()
+            self.logger = Logger()
 
             if not self.superuser_exists():
                 dialog = self.SuperuserDialog()
@@ -257,6 +259,7 @@ class AuthenticationWindow(QWidget):
             return
 
         constants.PASSWORD = pwd1
+        self.user_management_utility.create_local_user(self.username, pwd1)
 
         QMessageBox.information(self, "Password Set", "Password saved successfully.")
 
@@ -335,7 +338,7 @@ class AuthenticationWindow(QWidget):
                     "Enrollment Complete",
                     f"Collected {self.enroll_target} samples."
                 )
-
+            self.logger.log(self.username, "Completed keyboard data enrollment")
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
 
@@ -352,6 +355,7 @@ class AuthenticationWindow(QWidget):
         try:
             self.data_utility.load_csv_key_features(file_path)
             QMessageBox.information(self, "Load CSV", f"Features successfully loaded from {file_path}.")
+            self.logger.log(self.username, f"Successfully loaded features from {file_path}.")
             self.on_mode_changed("Training")
         except Exception as e:
             QMessageBox.critical(self, "Load CSV", f"Failed to load features:\n{str(e)}")
@@ -441,6 +445,7 @@ class AuthenticationWindow(QWidget):
         self.training_status.setText("Training finished.")
         self.train_button.setEnabled(False)
         QMessageBox.information(self, "Training", "Model training finished successfully.")
+        self.logger.log(self.username, f"Model training finished successfully.")
         self.on_mode_changed("Mouse Enrollment")
 
     def on_data_processing_finished(self):
@@ -552,6 +557,7 @@ class AuthenticationWindow(QWidget):
 
             if success:
                 QMessageBox.information(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                self.logger.log(self.username, f"Authentication successful with distance = {dist:.4f}")
                 try: self.switch_to_background_mode()
                 except Exception as e:
                     QMessageBox.critical(self, "Background Mode Error", str(e))
@@ -560,6 +566,7 @@ class AuthenticationWindow(QWidget):
                 self.password_entry.clear()
             else:
                 QMessageBox.critical(self, "Authentication", f"{message}\nDistance = {dist:.4f}")
+                self.logger.log(self.username, f"Authentication failed with distance = {dist:.4f}")
 
                 self.data_utility.reset(failed=True)
                 self.password_entry.clear()
@@ -1240,15 +1247,9 @@ class AuthenticationWindow(QWidget):
             QMessageBox.critical(self, "Superuser Login", "Incorrect password.")
             self.superuser_password_entry.clear()
 
-    import os
-    import numpy as np
-    from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout, QMessageBox, QWidget
-
-    USER_DATA_PATH = "path_to_user_data"  # folder with {username}_mouse_threshold.npy
-
     def setup_superuser_dashboard(self):
         self.clear_layout()
-        self.resize(800, 500)
+        self.resize(800, 600)  # slightly taller to fit logs
         self.center_on_screen()
 
         card = self.make_card()
@@ -1262,7 +1263,8 @@ class AuthenticationWindow(QWidget):
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        self.local_user = "test_mouse"
+        # --- Local user and threshold section ---
+        self.local_user = self.user_management_utility.get_local_user_username()
         self.threshold_file = os.path.join(constants.PATH_MODELS, f"{self.local_user}_mouse_threshold.npy")
 
         self.user_row = QHBoxLayout()
@@ -1291,9 +1293,34 @@ class AuthenticationWindow(QWidget):
         self.threshold_status_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.threshold_status_label)
 
+        # --- Logs view ---
+        logs_title = QLabel("Local User Activity Logs:")
+        logs_title.setProperty("class", "subtitle")
+        layout.addWidget(logs_title)
+
+        self.logs_view = QTextEdit()
+        self.logs_view.setReadOnly(True)
+        layout.addWidget(self.logs_view)
+
+        # Refresh logs button
+        self.refresh_logs_button = QPushButton("Refresh Logs")
+        self.refresh_logs_button.clicked.connect(self.update_logs_view)
+        layout.addWidget(self.refresh_logs_button, alignment=Qt.AlignLeft)
+
+        # Initialize logger
+        self.logger = Logger()  # make sure Logger class is imported
+
+        # Load logs for the first time
+        self.update_logs_view()
+
         self.layout.addStretch()
         self.layout.addWidget(card, alignment=Qt.AlignCenter)
         self.layout.addStretch()
+
+    # --- Helper to refresh logs ---
+    def update_logs_view(self):
+        logs_text = self.logger.get_logs(self.local_user)
+        self.logs_view.setPlainText(logs_text)
 
     def update_threshold_label(self):
         """Update the label to show current threshold or unknown"""
@@ -1346,4 +1373,22 @@ class AuthenticationWindow(QWidget):
         # Restore buttons
         self.edit_threshold_button.setEnabled(True)
         self.save_threshold_button.setVisible(False)
+
+    def setup_logs_view(self):
+        """Add a log viewer to the dashboard"""
+        self.logs_view = QTextEdit()
+        self.logs_view.setReadOnly(True)
+        self.logs_view.setPlaceholderText("User activity logs will appear here...")
+        self.layout.addWidget(self.logs_view)
+
+        # Button to refresh logs
+        self.refresh_logs_button = QPushButton("Refresh Logs")
+        self.refresh_logs_button.clicked.connect(self.load_user_logs(self.local_user))
+        self.layout.addWidget(self.refresh_logs_button)
+
+        # Load initial logs
+        self.load_user_logs(self.local_user)
+
+    def load_user_logs(self, username):
+        self.logs_view.setPlainText(self.logger.get_logs(username))
 
