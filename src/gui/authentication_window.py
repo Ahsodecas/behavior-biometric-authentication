@@ -48,7 +48,18 @@ class AuthenticationWindow(QWidget):
     def __init__(self):
         try:
             super().__init__()
-            self.setWindowTitle("Authentication App")
+            # Window appearance
+            self.setWindowFlags(
+                Qt.FramelessWindowHint | Qt.Window
+            )
+
+            self.setAttribute(Qt.WA_TranslucentBackground)
+
+            # Full screen
+            self.showFullScreen()
+
+
+            #self.setWindowTitle("Authentication App")
 
             # ---------------- State ----------------
             self.mode = "landing"  # landing | enrollment | training | authentication
@@ -322,6 +333,7 @@ class AuthenticationWindow(QWidget):
                     "Enrollment Complete",
                     f"Collected {self.enroll_target} samples."
                 )
+                self.on_mode_changed("Training")
 
         except Exception as e:
             QMessageBox.critical(self, "Enrollment Error", str(e))
@@ -355,13 +367,13 @@ class AuthenticationWindow(QWidget):
         card = self.make_card()
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(30, 30, 30, 30)
-        card_layout.setSpacing(20)
+        card_layout.setSpacing(12)
 
         # Title row
         top_row = QHBoxLayout()
-        top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+        #top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
-        title = QLabel("Model Training")
+        title = QLabel("Keystroke Model Training")
         title.setObjectName("title")
         title.setFont(QFont("", 16, QFont.Bold))
         title.setStyleSheet("background: transparent;")
@@ -373,8 +385,9 @@ class AuthenticationWindow(QWidget):
         card_layout.addLayout(top_row)
 
         # Status label
-        self.training_status = QLabel("Press the button below to start training.")
+        self.training_status = QLabel("This will train the keystroke behavioural model based on collected data.")
         self.training_status.setAlignment(Qt.AlignCenter)
+        self.training_status.setWordWrap(True)
         self.training_status.setProperty("class", "instr")
         card_layout.addWidget(self.training_status)
 
@@ -450,9 +463,10 @@ class AuthenticationWindow(QWidget):
 
         # Title row
         top_row = QHBoxLayout()
-        top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+        #top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
-        title = QLabel("User Verification")
+        title = QLabel("Authenticate")
+        title.setProperty("class", "title")
         title.setObjectName("title")
         title.setFont(QFont("", 12, QFont.Bold))
         title.setStyleSheet("background: transparent;")
@@ -571,7 +585,7 @@ class AuthenticationWindow(QWidget):
             layout.setSpacing(16)
 
             top_row = QHBoxLayout()
-            top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+            #top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
             title = QLabel("Mouse Enrollment")
             title.setProperty("class", "title")
@@ -585,6 +599,7 @@ class AuthenticationWindow(QWidget):
             instr = QLabel("Mouse data collection will start and run for 3 minutes.")
             instr.setProperty("class", "instr")
             instr.setAlignment(Qt.AlignCenter)
+            instr.setWordWrap(True)
             layout.addWidget(instr)
 
             self.mouse_status_label = QLabel("Status: Waiting...")
@@ -664,7 +679,7 @@ class AuthenticationWindow(QWidget):
         layout.setSpacing(16)
 
         top_row = QHBoxLayout()
-        top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
+        #top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
         title = QLabel("Mouse Training")
         title.setProperty("class", "title")
@@ -678,6 +693,7 @@ class AuthenticationWindow(QWidget):
         instr = QLabel("This will train the mouse behavioral model based on collected data.")
         instr.setProperty("class", "instr")
         instr.setAlignment(Qt.AlignCenter)
+        instr.setWordWrap(True)
         layout.addWidget(instr)
 
         self.mouse_training_status = QLabel("Press 'Start Mouse Training' to begin.")
@@ -982,24 +998,36 @@ class AuthenticationWindow(QWidget):
 
 
     def setup_layout(self):
+
+        self.setStyleSheet("""
+            AuthenticationWindow {
+                background-color: rgba(0, 0, 0, 0);
+            }
+        """)
         self.layout = QVBoxLayout(self)
         self.layout.setAlignment(Qt.AlignCenter)
         self.layout.setSpacing(20)
         self.setLayout(self.layout)
 
-
     def center_on_screen(self):
+        if self.isFullScreen():
+            return
         frame = self.frameGeometry()
         screen = QApplication.primaryScreen().availableGeometry().center()
         frame.moveCenter(screen)
         self.move(frame.topLeft())
-
 
     def make_card(self):
         card = QFrame()
         card.setObjectName("card")
         card.setMinimumWidth(600)
         card.setMinimumHeight(400)
+        card.setStyleSheet("""
+            QFrame#card {
+                background-color: white;
+                border-radius: 16px;
+            }
+        """)
         return card
 
 
@@ -1016,9 +1044,9 @@ class AuthenticationWindow(QWidget):
 
         mode_box = self.create_mode_selector()
         mode_box.setFixedWidth(180)
-        top_row.addWidget(mode_box, alignment=Qt.AlignLeft)
+        #top_row.addWidget(mode_box, alignment=Qt.AlignLeft)
 
-        title = QLabel("User Enrollment")
+        title = QLabel("Keystroke Enrollment")
         title.setObjectName("title")
         title.setProperty("class", "title")
         title.setAlignment(Qt.AlignCenter)
@@ -1039,6 +1067,7 @@ class AuthenticationWindow(QWidget):
         )
         instr.setProperty("class", "instr")
         instr.setAlignment(Qt.AlignCenter)
+        instr.setWordWrap(True)
         card_layout.addWidget(instr)
 
 
