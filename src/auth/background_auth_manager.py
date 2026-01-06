@@ -67,7 +67,7 @@ class BackgroundAuthManager(QObject):
     # =========================
     # Collection + Authentication
     # =========================
-    def _collect_data_for_duration(self, duration_minutes=1):
+    def _collect_data_for_duration(self, duration_minutes=0.7):
         if self._stop_event.is_set():
             return
 
