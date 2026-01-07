@@ -200,7 +200,7 @@ class MouseModelTrainer:
         threshold = np.percentile(imposter_scores, 100 * (1 - constants.TARGET_FAR))
 
         threshold_path = os.path.join(
-            constants.PATH_MODELS,
+            constants.PATH_METRICS,
             f"{self.username}_mouse_threshold.npy"
         )
         np.save(threshold_path, threshold)

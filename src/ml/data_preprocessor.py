@@ -22,7 +22,6 @@ class DataPreprocessor:
         self.username = username
         self.output_csv = output_csv
 
-        # Base directory for all generated files
         self.base_dir = os.path.dirname(self.enrollment_csv)
 
     # -------------------------------------------------------
@@ -105,9 +104,11 @@ class DataPreprocessor:
                 return None
             print("[DataProcessor] Generating synthetic samples via DataUtility...")
             synth_df = self.generate_synthetic()
+            print(f"[DataProcessor] generated synthetic samples: {synth_df}")
 
             print("[DataPreprocessor] Generating imposter samples...")
             dsl_df = self.generate_imposter_synthetic()
+            print(f"[DataProcessor] generated imposter samples: {dsl_df}")
 
             print("[DataPreprocessor] Combining datasets...")
             try:

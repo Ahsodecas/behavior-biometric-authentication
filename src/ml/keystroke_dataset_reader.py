@@ -1,10 +1,11 @@
 import os
 import csv
+import src.constants as constants
 
 class KeystrokeDatasetReader:
     def __init__(self):
         self.features = []
-        self.dataset_dir = "/datasets/DATASET"
+        self.dataset_dir = os.path.join(constants.PATH_DATASETS, "DATASET")
 
     VK_TO_TOKEN = {
         **{vk: chr(vk) for vk in range(65, 91)},  # A–Z

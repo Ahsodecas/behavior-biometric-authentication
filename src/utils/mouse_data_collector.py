@@ -21,6 +21,9 @@ class MouseDataCollector:
         self.data_dir = PATH_COLLECTED
         self.start_time = None  # store experiment start time
 
+    def set_username(self, username):
+        self.username = username
+
     def _collect_loop(self):
         def on_move(x, y):
             timestamp = (time.time() - self.start_time) * 1000  # relative timestamp

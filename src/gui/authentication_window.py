@@ -1,7 +1,3 @@
-# =====================================================================
-#  IMPORTS
-# =====================================================================
-
 import os
 import csv
 from datetime import time
@@ -38,15 +34,8 @@ from src.utils.logger import Logger
 
 import src.constants as constants
 
-# =====================================================================
-#  MAIN AUTHENTICATION WINDOW CLASS
-# =====================================================================
-
 class AuthenticationWindow(QWidget):
 
-    # -----------------------------------------------------------------
-    #  INITIALIZATION
-    # -----------------------------------------------------------------
     def __init__(self):
         try:
             super().__init__()
@@ -60,8 +49,6 @@ class AuthenticationWindow(QWidget):
             # Full screen
             self.showFullScreen()
 
-
-            #self.setWindowTitle("Authentication App")
 
             # ---------------- State ----------------
             self.mode = "landing"  # landing | enrollment | training | authentication
@@ -140,14 +127,9 @@ class AuthenticationWindow(QWidget):
         register_btn.setProperty("class", "secondary")
         register_btn.clicked.connect(self.handle_register)
 
-        #superuser_btn = QPushButton("Login Superuser")
-        #superuser_btn.setProperty("class", "secondary")
-        #superuser_btn.clicked.connect(self.handle_login_superuser)
-
         btn_row.addStretch()
         btn_row.addWidget(login_btn)
         btn_row.addWidget(register_btn)
-        #btn_row.addWidget(superuser_btn)
         btn_row.addStretch()
 
         layout.addLayout(btn_row)
@@ -180,8 +162,8 @@ class AuthenticationWindow(QWidget):
                 QMessageBox.warning(self, "Login", "Please enter a username")
                 return
 
-            superuser = self.user_management_utility.get_superuser()
-            if superuser and superuser['username'] == username:
+            superuser_username = self.user_management_utility.get_superuser_username()
+            if superuser_username and superuser_username == username:
                 # It's a superuser → prompt for superuser password
                 self.username = username
                 self.setup_superuser_password_page()
@@ -284,6 +266,8 @@ class AuthenticationWindow(QWidget):
 
         constants.PASSWORD = pwd1
         self.user_management_utility.create_local_user(self.username, pwd1)
+        self.data_utility.feature_extractor.generate_required_features(password=pwd1)
+        self.data_utility.feature_extractor_imposter_users.generate_required_features(password=pwd1)
 
         QMessageBox.information(self, "Password Set", "Password saved successfully.")
 
@@ -332,14 +316,14 @@ class AuthenticationWindow(QWidget):
                 return
 
             self.username = username
-            if password != constants.PASSWORD:
+            if not self.user_management_utility.verify_user(username, password):
                 QMessageBox.warning(self, "Enrollment", "Password does not match.")
                 self.password_entry.clear()
                 self.data_utility.reset(failed=True)
                 return
 
             self.data_utility.set_username(username)
-            self.data_utility.extract_features(username)
+            self.data_utility.extract_features(username, password)
             filename = "enrollment_features.csv"
 
 
@@ -450,6 +434,9 @@ class AuthenticationWindow(QWidget):
                 output_csv=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv")
             )
 
+            preprocessor.data_utility.feature_extractor.generate_required_features(password=constants.PASSWORD)
+            preprocessor.data_utility.feature_extractor_imposter_users.generate_required_features(password=constants.PASSWORD)
+
             trainer = ModelTrainer(
                 csv_path=os.path.join(constants.PATH_DATASETS, f"{username}_training.csv"),
                 username=username,
@@ -492,9 +479,7 @@ class AuthenticationWindow(QWidget):
         card_layout.setContentsMargins(18, 16, 18, 16)
         card_layout.setSpacing(12)
 
-        # Title row
         top_row = QHBoxLayout()
-        #top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
 
         title = QLabel("Authenticate")
         title.setProperty("class", "title")
@@ -529,7 +514,6 @@ class AuthenticationWindow(QWidget):
         prow.addWidget(self.password_entry)
         card_layout.addLayout(prow)
 
-        # Buttons row
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
@@ -538,7 +522,6 @@ class AuthenticationWindow(QWidget):
         self.authenticate_button.clicked.connect(self.authenticate)
         btn_row.addWidget(self.authenticate_button)
 
-        # Go Back button
         self.back_button = QPushButton("Go Back")
         self.back_button.setProperty("class", "secondary")
         self.back_button.clicked.connect(self.setup_landing_page)
@@ -574,7 +557,7 @@ class AuthenticationWindow(QWidget):
             try:
                 self.username = username
                 self.data_utility.set_username(username=username)
-                self.data_utility.extract_features(username)
+                self.data_utility.extract_features(username, password)
                 features = self.data_utility.feature_extractor.key_features.data
                 self.data_utility.save_raw_csv(filename="raw.csv")
                 self.data_utility.save_features_csv(filename="temp_features.csv")
@@ -639,7 +622,7 @@ class AuthenticationWindow(QWidget):
             top_row.addStretch()
             layout.addLayout(top_row)
 
-            instr = QLabel("Mouse data collection will start and run for 3 minutes.")
+            instr = QLabel("Mouse data collection will start and run for 1 minute.")
             instr.setProperty("class", "instr")
             instr.setAlignment(Qt.AlignCenter)
             instr.setWordWrap(True)
@@ -650,7 +633,6 @@ class AuthenticationWindow(QWidget):
             self.mouse_status_label.setAlignment(Qt.AlignCenter)
             layout.addWidget(self.mouse_status_label)
 
-            # Buttons row
             btn_row = QHBoxLayout()
             btn_row.addStretch()
 
@@ -722,8 +704,6 @@ class AuthenticationWindow(QWidget):
         layout.setSpacing(16)
 
         top_row = QHBoxLayout()
-        #top_row.addWidget(self.create_mode_selector(), alignment=Qt.AlignLeft)
-
         title = QLabel("Mouse Training")
         title.setProperty("class", "title")
         title.setAlignment(Qt.AlignCenter)
@@ -753,7 +733,6 @@ class AuthenticationWindow(QWidget):
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
-        # Add card to main layout
         self.layout.addStretch()
         self.layout.addWidget(card, alignment=Qt.AlignCenter)
         self.layout.addStretch()
@@ -762,7 +741,7 @@ class AuthenticationWindow(QWidget):
         try:
             self.mouse_training_status.setText("Mouse model training in progress... Please wait.")
 
-            enrollment_csv = os.path.join(constants.PATH_EXTRACTED, self.username, "mouse_enrollement.csv")
+            enrollment_csv = os.path.join(constants.PATH_COLLECTED, self.username, "mouse_enrollement.csv")
             dataset_root = os.path.join(constants.PATH_DATASETS, "sapimouse")
             model_out_dir = constants.PATH_MODELS
 
@@ -778,7 +757,6 @@ class AuthenticationWindow(QWidget):
                 lr=1e-3
             )
 
-            # Train the model
             model_path, auc = trainer.train()
             self.mouse_training_status.setText(f"Training complete.")
             QMessageBox.information(
@@ -1176,7 +1154,7 @@ class AuthenticationWindow(QWidget):
 
     def superuser_exists(self):
         """Check if a superuser is already created."""
-        return self.user_management_utility.get_superuser() is not None
+        return self.user_management_utility.get_superuser_username() is not None
 
     class SuperuserDialog(QDialog):
         def __init__(self):
@@ -1216,16 +1194,13 @@ class AuthenticationWindow(QWidget):
             QMessageBox.warning(self, "Login Superuser", "Please enter a username")
             return
 
-        # Check if superuser exists with this username
-        superuser = self.user_management_utility.get_superuser()
-        if not superuser or superuser['username'] != username:
+        superuser_username = self.user_management_utility.get_superuser_username()
+        if not superuser_username or superuser_username != username:
             QMessageBox.warning(self, "Login Superuser", "No superuser found with this username")
             return
 
-        # Store username temporarily
         self.username = username
 
-        # Redirect to password page
         self.setup_superuser_password_page()
 
     def setup_superuser_password_page(self):
@@ -1260,19 +1235,16 @@ class AuthenticationWindow(QWidget):
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(16)
 
-        # Title
         title = QLabel("Superuser Login")
         title.setProperty("class", "title")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        # Subtitle
         subtitle = QLabel("Enter the superuser password")
         subtitle.setProperty("class", "instr")
         subtitle.setAlignment(Qt.AlignCenter)
         layout.addWidget(subtitle)
 
-        # Password input
         self.superuser_password_entry = QLineEdit()
         self.superuser_password_entry.setEchoMode(QLineEdit.Password)
         self.superuser_password_entry.setPlaceholderText("Enter password")
@@ -1286,7 +1258,6 @@ class AuthenticationWindow(QWidget):
         """)
         layout.addWidget(self.superuser_password_entry)
 
-        # Buttons row
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
@@ -1303,7 +1274,6 @@ class AuthenticationWindow(QWidget):
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
-        # Add card to main layout
         self.layout.addStretch()
         self.layout.addWidget(card, alignment=Qt.AlignCenter)
         self.layout.addStretch()
@@ -1315,13 +1285,13 @@ class AuthenticationWindow(QWidget):
         Redirect to dashboard if successful.
         """
         password = self.superuser_password_entry.text()
-        superuser = self.user_management_utility.get_superuser()
+        superuser_username = self.user_management_utility.get_superuser_username()
 
-        if not superuser:
+        if not superuser_username:
             QMessageBox.critical(self, "Error", "No superuser found")
             return
 
-        if self.user_management_utility.verify_superuser(self.username, password):
+        if self.user_management_utility.verify_user(self.username, password):
             QMessageBox.information(self, "Superuser Login", "Authentication successful!")
             self.setup_superuser_dashboard()
         else:
@@ -1338,28 +1308,24 @@ class AuthenticationWindow(QWidget):
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
-        # Title
         title = QLabel(f"Superuser Dashboard - {self.username}")
         title.setProperty("class", "title")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        # --- Local user and threshold section ---
         self.local_user = self.user_management_utility.get_local_user_username()
-        self.threshold_file = os.path.join(constants.PATH_MODELS, f"{self.local_user}_mouse_threshold.npy")
+        self.threshold_file = os.path.join(constants.PATH_METRICS, f"{self.local_user}_mouse_threshold.npy")
 
         self.user_row = QHBoxLayout()
         user_label = QLabel(f"Username: {self.local_user}")
         user_label.setProperty("class", "field-label")
         self.user_row.addWidget(user_label)
 
-        # Threshold label
         self.threshold_label = QLabel()
         self.threshold_label.setProperty("class", "field-label")
         self.update_threshold_label()
         self.user_row.addWidget(self.threshold_label)
 
-        # Edit button
         self.edit_threshold_button = QPushButton("Edit")
         self.edit_threshold_button.setProperty("class", "secondary")
         self.edit_threshold_button.clicked.connect(self.enable_threshold_editing)
@@ -1367,20 +1333,17 @@ class AuthenticationWindow(QWidget):
 
         layout.addLayout(self.user_row)
 
-        # Save button (hidden until editing)
         self.save_threshold_button = QPushButton("Save")
         self.save_threshold_button.setProperty("class", "primary")
         self.save_threshold_button.setVisible(False)
         self.save_threshold_button.clicked.connect(self.save_new_threshold)
         layout.addWidget(self.save_threshold_button, alignment=Qt.AlignLeft)
 
-        # Status label
         self.threshold_status_label = QLabel("")
         self.threshold_status_label.setProperty("class", "status")
         self.threshold_status_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.threshold_status_label)
 
-        # --- Logs view ---
         logs_title = QLabel("Local User Activity Logs:")
         logs_title.setProperty("class", "subtitle")
         layout.addWidget(logs_title)
@@ -1392,13 +1355,11 @@ class AuthenticationWindow(QWidget):
 
         self.logs_view.setFixedHeight(90)
 
-        # Prevent vertical expansion
         self.logs_view.setSizePolicy(
             QSizePolicy.Expanding,  # horizontal
             QSizePolicy.Fixed  # vertical
         )
 
-        # Make background transparent and inherit font
         self.logs_view.setStyleSheet("""
             background: transparent;
             border: none;
@@ -1407,7 +1368,6 @@ class AuthenticationWindow(QWidget):
         """)
         layout.addWidget(self.logs_view)
 
-        # Refresh logs button
         self.refresh_logs_button = QPushButton("Refresh Logs")
         self.refresh_logs_button.setProperty("class", "secondary")
         self.refresh_logs_button.clicked.connect(self.update_logs_view)
@@ -1415,30 +1375,24 @@ class AuthenticationWindow(QWidget):
 
         # Buttons row: Refresh, Logout, Stop Application
         btn_row = QHBoxLayout()
-        btn_row.setSpacing(16)  # spacing between buttons
+        btn_row.setSpacing(16)
 
-        # Logout button
         self.logout_button = QPushButton("Logout")
         self.logout_button.setProperty("class", "danger")
         self.logout_button.clicked.connect(self.logout_superuser)
         btn_row.addWidget(self.logout_button)
 
-        # Stop application button
         self.stop_app_button = QPushButton("Stop Authentication")
         self.stop_app_button.setProperty("class", "danger")
         self.stop_app_button.clicked.connect(QApplication.instance().quit)
         btn_row.addWidget(self.stop_app_button)
 
-        # Add stretch to push buttons to the left
         btn_row.addStretch()
 
-        # Add row to layout
         layout.addLayout(btn_row)
 
-        # Load logs
         self.update_logs_view()
 
-        # Add card to layout
         self.layout.addStretch()
         self.layout.addWidget(card, alignment=Qt.AlignCenter)
         self.layout.addStretch()
@@ -1457,18 +1411,14 @@ class AuthenticationWindow(QWidget):
                 self.bg_manager.deleteLater()
                 self.bg_manager = None
 
-            # Close any background window
             if hasattr(self, "bg_window") and self.bg_window:
                 self.bg_window.close()
                 self.bg_window = None
 
-            # Clear superuser state
             self.username = None
 
-            # Clear current layout
             self.clear_layout()
 
-            # Go back to landing page
             self.setup_landing_page()
 
         except Exception as e:
