@@ -1061,9 +1061,9 @@ class AuthenticationWindow(QWidget):
         # Title bar
         top_row = QHBoxLayout()
 
-        mode_box = self.create_mode_selector()
-        mode_box.setFixedWidth(180)
-        top_row.addWidget(mode_box, alignment=Qt.AlignLeft)
+        #mode_box = self.create_mode_selector()
+        #mode_box.setFixedWidth(180)
+        #top_row.addWidget(mode_box, alignment=Qt.AlignLeft)
 
         title = QLabel("Keystroke Enrollment")
         title.setObjectName("title")
