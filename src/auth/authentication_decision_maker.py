@@ -131,12 +131,11 @@ class AuthenticationDecisionMaker:
         GUI calls THIS function.
         Returns: (success: bool, distance: float, message: str)
         """
+        if self.model is None or self.scaler is None or self.feature_cols is None:
+            return False, float("inf"), "Model not loaded."
 
         if not self.user_management_utility.verify_user(username, password):
             return False, float("inf"), "Incorrect password."
-
-        if self.model is None or self.scaler is None or self.feature_cols is None:
-            return False, float("inf"), "Model not loaded."
 
         raw_list = []
 

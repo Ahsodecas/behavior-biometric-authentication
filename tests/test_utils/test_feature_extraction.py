@@ -33,9 +33,9 @@ def extractor(tmp_path):
 
 def test_generate_required_features_order_and_content(extractor):
     import src.constants as constants
-    constants.PASSWORD = ".tie5Roanl"
+    password = ".tie5Roanl"
 
-    feats = extractor.generate_required_features()
+    feats = extractor.generate_required_features(password)
 
     assert feats == [
         'H..',
@@ -78,6 +78,7 @@ def test_create_features_directory_called(tmp_path):
 def test_extract_key_features_simple_sequence(extractor):
     import src.constants as constants
     constants.PASSWORD = ".ti"
+    password = constants.PASSWORD
 
     extractor.raw_key_data = [
         KeyStrokeEvent(190, "press", 0.0, 0.0, "."),
@@ -88,7 +89,7 @@ def test_extract_key_features_simple_sequence(extractor):
         KeyStrokeEvent(73, "release", 0.5, 0.5, "i"),
     ]
 
-    extractor.extract_key_features()
+    extractor.extract_key_features(password)
 
     assert extractor.key_features.get_key("H..") == pytest.approx(0.1)
     assert extractor.key_features.get_key("H.t") == pytest.approx(0.1)
@@ -100,7 +101,7 @@ def test_metadata_written(extractor):
         KeyStrokeEvent(65, "release", 1.1, 1.1, "a"),
     ]
 
-    extractor.extract_key_features()
+    extractor.extract_key_features(password="a")
     meta = extractor.key_features.metadata
 
     assert meta["subject"] == "test_user"
@@ -109,13 +110,14 @@ def test_metadata_written(extractor):
 def test_save_key_features_csv(tmp_path, extractor):
     import src.constants as constants
     constants.PASSWORD = "a"
-    extractor.feature_cols = extractor.generate_required_features()
+    password = constants.PASSWORD
+    extractor.feature_cols = extractor.generate_required_features(password)
 
     extractor.raw_key_data = [
         KeyStrokeEvent(65, "press", 1.0, 1.0, "a"),
         KeyStrokeEvent(65, "release", 1.2, 1.2, "a"),
     ]
-    extractor.extract_key_features()
+    extractor.extract_key_features(password)
 
     out = tmp_path / "out.csv"
 
@@ -136,7 +138,7 @@ def test_missing_features_written_as_zero(tmp_path, extractor):
         KeyStrokeEvent(65, "press", 1.0, 1.0, "a"),
         KeyStrokeEvent(65, "release", 1.2, 1.2, "a"),
     ]
-    extractor.extract_key_features()
+    extractor.extract_key_features(password="a")
 
     out = tmp_path / "out.csv"
     extractor.save_key_features_csv(filename=out)
@@ -153,7 +155,7 @@ def test_append_mode(tmp_path, extractor):
         KeyStrokeEvent(65, "press", 1.0, 1.0, "a"),
         KeyStrokeEvent(65, "release", 1.1, 1.1, "a"),
     ]
-    extractor.extract_key_features()
+    extractor.extract_key_features(password="a")
 
     out = tmp_path / "append.csv"
 

@@ -55,6 +55,7 @@ class FeatureExtractor:
 
         self.feature_cols = features
         print(f"[FEATURE EXTRACTOR] generated required features: {self.feature_cols} from password: {password}")
+        return self.feature_cols
 
     def create_features_directory(self):
         """Create global features folder inside project root."""
