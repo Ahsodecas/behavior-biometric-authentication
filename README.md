@@ -49,7 +49,7 @@ python-auth-app
    ```
    python src/main.py
    ```
-5. Additional Notes}
+5. Additional Notes:
     - Make sure your Python version is compatible.
     - If you encounter permission issues, try **pip install --user -r requirements.txt**.
     - item The installation has not been thoroughly tested on macOS/Linux, but it does work on these platforms.
