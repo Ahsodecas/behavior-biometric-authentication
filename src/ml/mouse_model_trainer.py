@@ -113,7 +113,9 @@ class MouseModelTrainer:
         X_neg = []
         for user in os.listdir(self.dataset_root):
             user_path = os.path.join(self.dataset_root, user)
+            print(f"[MOUSE MODEL TRAINER] checking user path: {user_path}")
             if not os.path.isdir(user_path):
+                print(f"[MOUSE MODEL TRAINER] invalid user path: {user_path}")
                 continue
             # Skip enrollment CSV (assume it belongs to target user)
             if os.path.abspath(user_path) == os.path.abspath(os.path.dirname(self.enrollment_csv)):
@@ -204,15 +206,3 @@ class MouseModelTrainer:
             f"{self.username}_mouse_threshold.npy"
         )
         np.save(threshold_path, threshold)
-
-
-# =====================================================================
-#  Example usage
-# =====================================================================
-if __name__ == "__main__":
-    trainer = MouseModelTrainer(
-        enrollment_csv="mouse_enrollement.csv",
-        dataset_root="sapimouse",
-        out_dir="models"
-    )
-    trainer.train()
