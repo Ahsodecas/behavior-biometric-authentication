@@ -54,7 +54,6 @@ class FeatureExtractor:
                 features.append(f"UD.{k1}.{k2}")
 
         self.feature_cols = features
-        print(f"[FEATURE EXTRACTOR] generated required features: {self.feature_cols} from password: {password}")
         return self.feature_cols
 
     def create_features_directory(self):
@@ -63,7 +62,6 @@ class FeatureExtractor:
 
     def set_username(self, username: str):
         self.username = username
-        print(f"USERNAME IN FEATURE EXTRACTOR SET {username}")
 
     def extract_key_features(self, password: str):
         """
@@ -225,7 +223,6 @@ class FeatureExtractor:
         # --------------------------------------------
         metadata_keys = ["subject", "sessionIndex", "generated", "rep"]
         feature_keys = self.feature_cols
-        print(f"[FEATURE EXTRACTOR] feature columns : {self.feature_cols}")
         fieldnames = metadata_keys + feature_keys
 
         mode = 'a' if append and os.path.exists(filename) else 'w'
