@@ -43,12 +43,9 @@ class ExtractedFeatures:
 
         try:
             df = pd.read_csv(file_path)
-            # If multiple rows, take the first one (or iterate if needed)
             row = df.iloc[0].to_dict()
 
             for key, val in row.items():
-                #print("key: " + key + " val: " + str(val))
-                # Handle metadata columns
                 if key in ["subject", "sessionIndex", "rep", "generated"]:
                     try:
                         if key == "subject":
@@ -59,7 +56,6 @@ class ExtractedFeatures:
                         pass
                     metadata[key] = val
                 else:
-                    # Convert feature to numeric float
                     try:
                         num = float(val)
                     except Exception:
@@ -106,7 +102,6 @@ class ExtractedFeatures:
                         try:
                             if key == "subject":
                                 username = str(val)
-                                print("READ USERNAME IS " + username)
                             else:
                                 val = int(val)
                         except Exception:
@@ -137,5 +132,4 @@ class ExtractedFeatures:
         except Exception as e:
             print(f"Failed to load CSV features: {e}")
             return None
-
 

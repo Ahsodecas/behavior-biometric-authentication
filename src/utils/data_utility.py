@@ -27,26 +27,24 @@ class DataUtility:
     def feed_key_event(self, event, event_type):
         self.data_collector.collect_key_event(event, event_type)
 
-    def extract_features(self, username):
+    def extract_features(self, username: str, password: str):
         self.set_username(username=username)
         self.feature_extractor.raw_key_data = self.data_collector.data
         self.data_collector.save_key_raw_csv(filename="raw.csv")
-        self.feature_extractor.extract_key_features()
+        self.feature_extractor.extract_key_features(password)
 
     def generate_synthetic_features(self, filename, repetitions=10):
         self.synthetic_features_generator_genuine_user.genuine_features = self.feature_extractor.preprocess_features_for_synthesis()
         print("GENUINE FEATURES: ")
         print(self.synthetic_features_generator_genuine_user.genuine_features)
         generated_features = self.synthetic_features_generator_genuine_user.generate(repetitions=repetitions)
-
+        # print(f"[DATA UTILITY] generated features: {generated_features}")
         self.save_generated_features_csv(generated_features=generated_features, filename=filename, append=True, repetitions=repetitions)
 
 
     def generate_synthetic_features_imposter_users(self, filename: str, repetitions: int = 1):
         hold_features, dd_features, ud_features = self.keystrokeDatasetReader.load_key_dataset()
         generated_features = self.synthetic_features_generator_imposter_users.generate(hold_features=hold_features, dd_features=dd_features, ud_features=ud_features, repetitions=repetitions)
-        #print("GENERATED IMPOSTER FEATURES, REPETITIONS: " + str(repetitions))
-        #print(generated_features)
 
         for i in range(0, repetitions):
             new_metadata = {"subject" : "imposter",
@@ -55,8 +53,6 @@ class DataUtility:
                             "rep": i}
 
             self.feature_extractor_imposter_users.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
-            #print("GENERATED FEATURES in FEATURE EXTRACTOR:")
-            #print(self.feature_extractor_imposter_users.key_features.features)
             self.feature_extractor_imposter_users.save_key_features_csv(filename=filename, append=True)
 
     def save_generated_features_csv(self, generated_features: list[list[tuple[str, float]]], filename: str, append: bool = True, repetitions: int = 1):
@@ -68,8 +64,6 @@ class DataUtility:
                             "rep": i}
 
             self.feature_extractor.key_features.update(metadata=new_metadata, features=dict(generated_features[i]))
-            #print("GENERATED FEATURES in FEATURE EXTRACTOR:")
-            #print(self.feature_extractor.key_features.features)
             self.save_features_csv(filename=filename, append=append)
 
     def load_csv_key_features(self, filename: str) -> str:
@@ -81,6 +75,7 @@ class DataUtility:
         self.synthetic_features_generator_genuine_user.set_username(username=username)
         self.feature_extractor_imposter_users.set_username(username=username)
         self.synthetic_features_generator_imposter_users.set_username(username=username)
+        self.mouse_data_collector.set_username(username=username)
 
     def save_raw_csv(self, filename=None):
         self.data_collector.save_key_raw_csv(filename)

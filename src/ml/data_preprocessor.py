@@ -22,7 +22,6 @@ class DataPreprocessor:
         self.username = username
         self.output_csv = output_csv
 
-        # Base directory for all generated files
         self.base_dir = os.path.dirname(self.enrollment_csv)
 
     # -------------------------------------------------------

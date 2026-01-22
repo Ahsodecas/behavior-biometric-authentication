@@ -37,10 +37,8 @@ class BackgroundAuthManager(QObject):
         self.data_utility = data_utility
         self.authenticator_model_path = authenticator_model_path
 
-        # Core utilities
         self.data_utility = DataUtility(username=username)
 
-        # Thread control
         self._stop_event = Event()
         self._thread = None
 
@@ -132,22 +130,16 @@ class BackgroundAuthManager(QObject):
             np.percentile(scores, 90),
             scores.max()
         )
-        # mean_score = scores.mean()
-        # accepted = mean_score >= self.DECISION_THRESHOLD
 
         self.threshold = float(
             np.load(
                 os.path.join(
-                    constants.PATH_MODELS,
+                    constants.PATH_METRICS,
                     f"{self.username}_mouse_threshold.npy"
                 )
             )
         )
         print("[BACKGROUND AUTH MANGER] threshold: ", self.threshold)
-        # vote_ratio = (scores >= threshold).mean()
-        #
-        # accepted = vote_ratio >= 0.7
-        # return accepted, float(vote_ratio)
 
         aggregated_score = np.percentile(scores, 20)
         accepted = aggregated_score >= self.threshold

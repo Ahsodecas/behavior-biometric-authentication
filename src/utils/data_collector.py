@@ -99,10 +99,9 @@ class DataCollector:
                         row["session_elapsed_time"]
                     ])
 
-            print(f"Raw data saved to {filename}")
+            # print(f"Raw data saved to {filename}")
             return filename
 
         except Exception as e:
             print(f"[ERROR] Failed to save raw keystroke data: {e}")
             return None
-

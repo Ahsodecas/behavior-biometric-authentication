@@ -8,12 +8,12 @@ from src.ml.triplet_dataset import CMUDatasetTriplet
 import pandas as pd
 
 import src.constants as constants
+from src.utils.user_management_utility import UserManagementUtility
 
 class AuthenticationDecisionMaker:
     """
-    Handles ALL authentication logic (model loading, password check,
+    Handles authentication logic (model loading, password check,
     feature normalization, embedding, distance check).
-    The GUI should only call authenticator.authenticate().
     """
 
     def __init__(self, username=None, threshold=0.4):
@@ -25,6 +25,7 @@ class AuthenticationDecisionMaker:
         self.scaler = None
         self.ref_sample = None
         self.feature_cols = None
+        self.user_management_utility = UserManagementUtility()
 
     # ---------------------------------------------------------
     # ------------ LOAD MODEL + SCALER + REF SAMPLE ----------
@@ -59,7 +60,6 @@ class AuthenticationDecisionMaker:
 
         df = pd.read_csv(training_csv_path)
 
-        # Filter reference samples:
         ref_df = df[(df["subject"] == username) & (df["generated"] == 0)]
 
         if ref_df.empty:
@@ -82,11 +82,7 @@ class AuthenticationDecisionMaker:
         # -------------------------------
         ref_matrix_norm = self.scaler.transform(ref_matrix_raw)
 
-        # Compute reference sample as mean vector
         self.ref_sample = ref_matrix_norm.mean(axis=0).astype(np.float32)
-
-        #print("Reference sample computed from real Ksenia samples.")
-        #print(self.ref_sample)
 
         # -------------------------------
         # Load Triplet network
@@ -94,7 +90,6 @@ class AuthenticationDecisionMaker:
         model = TripletSNN(input_dim=input_dim)
         ckpt = torch.load(ckpt_path, map_location=self.device)
 
-        # Support both "model_state" and older checkpoints
         if "model_state" in ckpt:
             state = ckpt["model_state"]
         else:
@@ -136,27 +131,20 @@ class AuthenticationDecisionMaker:
         GUI calls THIS function.
         Returns: (success: bool, distance: float, message: str)
         """
-
-        # password check
-        if password != constants.PASSWORD:
-            return False, float("inf"), "Incorrect password."
-
-        # Ensure model loaded
         if self.model is None or self.scaler is None or self.feature_cols is None:
             return False, float("inf"), "Model not loaded."
 
-        # Convert collected features -> ordered vector
+        if not self.user_management_utility.verify_user(username, password):
+            return False, float("inf"), "Incorrect password."
+
         raw_list = []
 
         for col in self.feature_cols:
 
             if col not in feature_dict:
                 val = 0
-                #return False, float("inf"), f"Missing feature in DataCollector: {col}"
             else:
                 val = feature_dict[col]
-
-            # Convert to numeric float
             try:
                 # Case 1: numeric types -> convert directly
                 num = float(val)
@@ -173,21 +161,17 @@ class AuthenticationDecisionMaker:
 
             raw_list.append(num)
 
-        # Now convert to float32 numpy vector
         raw_vec = np.array(raw_list, dtype=np.float32)
 
-        # Normalize
         try:
             normalized_vec = self.scaler.transform(raw_vec.reshape(1, -1))[0]
         except Exception as e:
             return False, float("inf"), f"Scaler transform failed: {e}"
 
-        #print(normalized_vec)
         dist = self.compute_distance(normalized_vec)
 
         if dist < self.threshold:
             return True, dist, "Authenticated successfully."
         else:
             return False, dist, "Authentication failed."
-
 

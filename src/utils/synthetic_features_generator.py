@@ -2,6 +2,7 @@ import statistics as stat
 import random
 import numpy as np
 import src.constants as constants
+from src.utils.user_management_utility import UserManagementUtility
 
 class SyntheticFeaturesGenerator:
     def __init__(self, username=None):
@@ -12,6 +13,7 @@ class SyntheticFeaturesGenerator:
         self.context_order = 3
         self.min_context_cardinality = 10
         self.channels = {"hold" : "hold", "UD" : "UD", "DD" : "DD"}
+        self.user_management_utility = UserManagementUtility()
 
         self.init_context_sets()
 
@@ -66,29 +68,6 @@ class SyntheticFeaturesGenerator:
                 ud_flight_features.append((key, value))
 
         return hold_features, dd_flight_features, ud_flight_features
-
-    # this function may provide optimization to Si sets extraction, should be used later
-    def _build_context_set(self, features_dict, context_dict):
-        for order in range(self.context_order + 1):
-            for i in range(len(features_dict)):
-                key_i, _ = features_dict[i]
-                if i < order:
-                    continue
-                keys_context = tuple(features_dict[i - order + k][0] for k in range(order))
-                context_set_i = set()
-                for j in range(order, len(features_dict)):
-                    prev_context = tuple(features_dict[j - order + k][0] for k in range(order))
-                    if prev_context == keys_context:
-                        context_set_i.add(features_dict[j][1])
-                context_dict[order].setdefault(key_i, set()).update(context_set_i)
-
-
-    def build_context_sets(self):
-        hold_features, dd_flight_features, ud_flight_features = self.split_genuine_features()
-        self._build_context_set(hold_features, self.context_sets["hold"])
-        self._build_context_set(dd_flight_features,  self.context_sets["DD"])
-        self._build_context_set(ud_flight_features, self.context_sets["UD"])
-
 
     def fcm_sequence_si(self, training_u, m, context_tuple, target_key):
         """
@@ -206,7 +185,6 @@ class SyntheticFeaturesGenerator:
 
     def f_generating_func_mean(self, Si):
         """
-        Implements the simplest method described in the paper:
         f(S_i) = average over all past observations in S_i.
 
         Si : set of timing values (non-empty)
@@ -266,12 +244,9 @@ class SyntheticFeaturesGenerator:
 
 
     def generate(self, hold_features: list[tuple[str, float]] = None, dd_features: list[tuple[str, float]] = None, ud_features: list[tuple[str, float]] = None, repetitions: int = 1) -> list[list[tuple[str, float]]]:
-        # self.build_context_sets()
 
         if hold_features is None or dd_features is None or ud_features is None:
             hold_features, dd_features, ud_features = self.split_genuine_features()
-
-        # print("FEATURE SPLIT SUCCESSFULLY")
 
         self.generated_features = [[] for _ in range(repetitions)]
 
@@ -280,39 +255,24 @@ class SyntheticFeaturesGenerator:
         decisions_hold = self.select_contexts_for_sequence(hold_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["hold"])
 
-        # print("HOLD CONTEXT SETS CREATED SUCCESSFULLY")
         decisions_dd = self.select_contexts_for_sequence(dd_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["DD"])
-        # print("DD CONTEXT SETS CREATED SUCCESSFULLY")
 
         decisions_ud = self.select_contexts_for_sequence(ud_features, K_sequence=key_sequence,
                                                             M=self.context_order, channel=self.channels["UD"])
 
-        # print("UD CONTEXT SETS CREATED SUCCESSFULLY")
-
         self.generate_features_from_decisions(decisions_hold, key_sequence=key_sequence,
                                               channel=self.channels["hold"],generating_function="icdf",
                                               repetitions=repetitions)
-
-        # print("HOLD FEATURES GENERATED SUCCESSFULLY")
         self.generate_features_from_decisions(decisions_dd, key_sequence=key_sequence,
                                               channel=self.channels["DD"], generating_function="icdf",
                                               repetitions=repetitions)
 
-        # print("DD FEATURES GENERATED SUCCESSFULLY")
         self.generate_features_from_decisions(decisions_ud, key_sequence=key_sequence,
                                               channel=self.channels["UD"], generating_function="icdf",
                                               repetitions=repetitions)
 
-        # print("UD FEATURES GENERATED SUCCESSFULLY")
-
-        # print("DECISIONS FOR HOLD KEY SEQUENCE: ")
-        # print(decisions_hold)
-
         self.order_generated_features(key_sequence=key_sequence, repetitions=repetitions)
-
-        #print("Generated features in feature generator final:")
-        #print(self.generated_features)
 
         return self.generated_features
 
@@ -358,15 +318,8 @@ class SyntheticFeaturesGenerator:
                         ordered_features.append((hold_name, hold_dict[hold_name]))
 
             self.generated_features[rep] = ordered_features
-            # print(f"ORDERED FEATURES FOR ROW {rep}:")
-            # print(ordered_features)
-
-
 
     def clear_data(self):
         self.genuine_features = []
         self.generated_features = []
         self.init_context_sets()
-
-
-
