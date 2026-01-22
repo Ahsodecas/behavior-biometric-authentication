@@ -1061,8 +1061,8 @@ class AuthenticationWindow(QWidget):
         # Title bar
         top_row = QHBoxLayout()
 
-        #mode_box = self.create_mode_selector()
-        #mode_box.setFixedWidth(180)
+        mode_box = self.create_mode_selector()
+        mode_box.setFixedWidth(180)
         #top_row.addWidget(mode_box, alignment=Qt.AlignLeft)
 
         title = QLabel("Keystroke Enrollment")
@@ -1427,8 +1427,8 @@ class AuthenticationWindow(QWidget):
     def update_threshold_label(self):
         if os.path.exists(self.threshold_file):
             try:
-                threshold = np.load(self.threshold_file).item()
-                self.threshold_label.setText(f"Mouse Threshold: {threshold:.3f}")
+                threshold = np.load(self.threshold_file)[0]
+                self.threshold_label.setText(f"Threshold: {threshold}")
             except Exception:
                 self.threshold_label.setText("Threshold: unknown")
         else:
@@ -1438,17 +1438,11 @@ class AuthenticationWindow(QWidget):
 
     def enable_threshold_editing(self):
         self.user_row.removeWidget(self.threshold_label)
-        self.threshold_label.deleteLater()
+        self.threshold_label.setParent(None)
 
         self.threshold_entry = QLineEdit()
         if os.path.exists(self.threshold_file):
-            try:
-                self.threshold_entry.setText(
-                    str(np.load(self.threshold_file).item())
-                )
-            except Exception:
-                pass
-
+            self.threshold_entry.setText(str(np.load(self.threshold_file)[0]))
         self.user_row.insertWidget(1, self.threshold_entry)
 
         self.save_threshold_button.setVisible(True)
@@ -1461,12 +1455,12 @@ class AuthenticationWindow(QWidget):
             QMessageBox.warning(self, "Superuser", "Please enter a valid number")
             return
 
-        np.save(self.threshold_file, new_threshold)
+        np.save(self.threshold_file, np.array([new_threshold]))
         self.threshold_status_label.setText(f"Threshold updated to {new_threshold}")
 
         # Restore label
         self.user_row.removeWidget(self.threshold_entry)
-        self.threshold_entry.deleteLater()
+        self.threshold_entry.setParent(None)
         self.threshold_entry = None
 
         self.threshold_label = QLabel()
