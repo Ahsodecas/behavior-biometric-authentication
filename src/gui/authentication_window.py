@@ -622,7 +622,7 @@ class AuthenticationWindow(QWidget):
             top_row.addStretch()
             layout.addLayout(top_row)
 
-            instr = QLabel("Mouse data collection will start and run for 1 minute.")
+            instr = QLabel("Mouse data collection will start and run for 3 minute.")
             instr.setProperty("class", "instr")
             instr.setAlignment(Qt.AlignCenter)
             instr.setWordWrap(True)
@@ -673,13 +673,14 @@ class AuthenticationWindow(QWidget):
 
         except Exception as e:
             QMessageBox.critical(self, "Load Mouse CSV Error", str(e))
+
     def start_mouse_collection(self):
         try:
             self.mouse_status_label.setText("Status: Collecting mouse data...")
             self.mouse_timer = QTimer()
             self.mouse_timer.setSingleShot(True)
             self.mouse_timer.timeout.connect(self.finish_mouse_collection)
-            self.mouse_timer.start(1 * 60 * 1000)
+            self.mouse_timer.start(3 * 60 * 1000)
 
             self.data_utility.start_background_collection()
 

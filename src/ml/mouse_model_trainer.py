@@ -153,13 +153,13 @@ class MouseModelTrainer:
     # -----------------------
     def build_model(self):
         self.model = Sequential([
-            Conv1D(16, kernel_size=5, activation="relu", input_shape=(self.window_size, 2)),
+            Conv1D(64, kernel_size=5, activation="relu", input_shape=(self.window_size, 2)),
             MaxPooling1D(2),
-            Conv1D(32, kernel_size=5, activation="relu"),
+            Conv1D(128, kernel_size=5, activation="relu"),
             MaxPooling1D(2),
             Flatten(),
-            Dense(32, activation="relu"),
-            Dropout(0.7),
+            Dense(128, activation="relu"),
+            Dropout(0.5),
             Dense(1, activation="sigmoid")
         ])
         self.model.compile(
